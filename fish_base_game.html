@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fisherman: Definitive Edition - Update 1.1</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #ffd700;
+            --ui-bg: rgba(255, 255, 255, 0.95);
+            --border: #3e2723;
+            --danger: #ff4757;
+            --ox: #00d2ff;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Press Start 2P', cursive;
+            background: #a7d8f5;
+            color: #333;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+        }
+
+        #ui {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none;
+        }
+
+        .panel {
+            background: var(--ui-bg);
+            padding: 12px;
+            border: 4px solid var(--border);
+            width: 320px;
+            pointer-events: auto;
+            box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .panel::-webkit-scrollbar {
+            display: none;
+        }
+
+        .panel {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .nav-display {
+            font-size: 8px;
+            background: #263238;
+            color: #ecf0f1;
+            padding: 8px;
+            margin-bottom: 8px;
+            border: 2px solid #000;
+        }
+
+        .bar-container {
+            width: 100%;
+            height: 10px;
+            background: #cfd8dc;
+            margin: 4px 0;
+            border: 2px solid #000;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.2s;
+        }
+
+        .list-title {
+            font-size: 8px;
+            color: #5d4037;
+            margin: 12px 0 6px 0;
+            border-bottom: 2px solid #5d4037;
+            padding-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .collapsible:hover {
+            color: #000;
+            border-color: #000;
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        .scrollable-list {
+            max-height: 140px;
+            overflow-y: auto;
+            padding-right: 2px;
+        }
+
+        .scrollable-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .scrollable-list {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        #catalog,
+        #rod-catalog,
+        #bait-catalog,
+        #inventory-list {
+            font-size: 7px;
+            line-height: 1.6;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            align-items: center;
+        }
+
+        .active-tag {
+            font-size: 6px;
+            background: #2ecc71;
+            color: #fff;
+            padding: 2px 4px;
+            margin-left: 5px;
+            border-radius: 2px;
+        }
+
+        .weight-badge {
+            background: #34495e;
+            color: #3498db;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 6px;
+            border: 1px solid #2c3e50;
+        }
+
+        .modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #efebe9;
+            border: 6px solid var(--border);
+            padding: 20px;
+            display: none;
+            z-index: 300;
+            width: 520px;
+            box-shadow: 0 0 0 5000px rgba(0, 0, 0, 0.7);
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            background: #795548;
+            border: 2px solid var(--border);
+            padding: 10px;
+            cursor: pointer;
+            font-size: 7px;
+            color: white;
+            font-family: 'Press Start 2P';
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #5d4037;
+            transform: scale(1.02);
+        }
+
+        #market-list {
+            max-height: 250px;
+            overflow-y: auto;
+            font-size: 7px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            border: 2px solid #ccc;
+            padding: 5px;
+            background: #fff;
+        }
+
+        #market-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        #market-list {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .market-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed #ddd;
+            padding: 8px 0;
+        }
+
+        .market-btn {
+            padding: 6px;
+            font-size: 6px;
+            background: #d35400;
+            border: 2px solid #000;
+            color: white;
+            cursor: pointer;
+            font-family: 'Press Start 2P';
+        }
+
+        .market-btn:hover {
+            background: #e67e22;
+        }
+
+        #hit-btn {
+            position: fixed;
+            width: 130px;
+            height: 50px;
+            background: var(--danger);
+            border: 4px solid #fff;
+            display: none;
+            z-index: 500;
+            cursor: pointer;
+            color: white;
+            justify-content: center;
+            align-items: center;
+            font-size: 10px;
+            box-shadow: 4px 4px 0 #000;
+            transform: translate(-50%, -50%);
+            user-select: none;
+        }
+
+        #msg {
+            position: fixed;
+            top: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #fff;
+            z-index: 600;
+            display: none;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 25px;
+            border: 4px solid #fff;
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        .wheel-tip {
+            font-size: 6px;
+            color: #e67e22;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .scroll-tip {
+            font-size: 6px;
+            color: #7f8c8d;
+            margin-top: 3px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="msg"></div>
+
+    <div id="ui">
+        <div class="panel">
+            <div class="nav-display">
+                LOCATION: <span id="loc-name" style="color:#81d4fa">---</span><br>
+                POSITION: <span id="loc-pos">0</span>m <br>
+                <span id="guide" style="color:var(--gold); margin-top: 4px; display: block;"></span>
+                <span id="merchant-guide" style="color:#ffcc00; margin-top: 4px; display: block;"></span>
+                <div
+                    style="margin-top: 6px; color: #aed581; border-top: 1px dashed #fff; padding-top: 6px; font-size: 6px;">
+                    UPDATE #1 (v1.1)</div>
+            </div>
+            <div style="color:#388e3c; font-size:16px; margin-bottom:5px; text-shadow: 1px 1px #000;">$ <span
+                    id="money">200</span></div>
+            <div style="font-size: 7px; margin-top: 6px;">OXYGEN <span id="trolling-indicator"
+                    style="color:#f1c40f; font-size:6px; display:none;">(TROLLING ON)</span></div>
+            <div class="bar-container">
+                <div id="ox-bar" class="bar-fill" style="width: 100%; background: var(--ox);"></div>
+            </div>
+            <div style="font-size: 7px;">HEALTH</div>
+            <div class="bar-container">
+                <div id="hp-bar" class="bar-fill" style="width: 100%; background: var(--danger);"></div>
+            </div>
+            <div onclick="document.getElementById('settingsModal').style.display='block'" style="text-align: center; font-size: 16px; font-weight: bold; cursor: pointer; letter-spacing: 2px; color: #7f8c8d; margin-top: 5px;">...</div>
+        </div>
+
+        <div class="panel">
+            <div class="list-title collapsible" onclick="toggleSection('inv-box', 'inv-icon')">
+                <span>BACKPACK (<span id="inv-count">0</span>/15)</span>
+                <span id="inv-icon">▼</span>
+            </div>
+            <div id="inv-box" style="display:block;">
+                <div id="inventory-list" class="scrollable-list"></div>
+                <div class="scroll-tip">Scroll inside the list</div>
+            </div>
+
+            <div class="list-title collapsible" onclick="toggleSection('rod-box', 'rod-icon')">
+                <span>GEAR</span>
+                <span id="rod-icon">▶</span>
+            </div>
+            <div id="rod-box" style="display:none;" onwheel="handleSelectionWheel(event, 'rod')">
+                <div id="rod-catalog"></div>
+                <div class="wheel-tip">Hover here + Scroll to select rod</div>
+            </div>
+
+            <div class="list-title collapsible" onclick="toggleSection('bait-box', 'bait-icon')">
+                <span>BAIT</span>
+                <span id="bait-icon">▶</span>
+            </div>
+            <div id="bait-box" style="display:none;" onwheel="handleSelectionWheel(event, 'bait')">
+                <div id="bait-catalog"></div>
+                <div class="wheel-tip">Hover here + Scroll to select bait</div>
+            </div>
+
+            <div class="list-title collapsible" onclick="toggleSection('cat-box', 'cat-icon')">
+                <span>FISH CATALOG</span>
+                <span id="cat-icon">▶</span>
+            </div>
+            <div id="cat-box" style="display:none;">
+                <div id="catalog" class="scrollable-list"></div>
+                <div class="scroll-tip">Scroll inside the list</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal">
+        <h2 style="color:#2c3e50; font-size:12px; text-align:center; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px;">
+            CONTROL CENTER</h2>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+            <button onclick="if(confirm('Are you sure you want to completely reset your game? You will lose all progress!')){localStorage.removeItem('fisherman_base_save');location.reload();}" class="btn" style="background:#c62828;">RESET GAME (WIPES SAVE)</button>
+            <button onclick="closeAll()" class="btn" style="background:#7f8c8d;">CLOSE [ESC]</button>
+        </div>
+    </div>
+
+    <div id="shopModal" class="modal">
+        <h2 id="shopTitle"
+            style="color:#4e342e; font-size:12px; text-align:center; border-bottom: 2px solid #d7ccc8; padding-bottom: 10px;">
+            SHOP</h2>
+        <div id="shopGrid" class="shop-grid"></div>
+        <button onclick="closeAll()" class="btn" style="background:#c62828; margin-top:15px; width:100%;">CLOSE
+            [ESC]</button>
+    </div>
+
+    <div id="marketModal" class="modal">
+        <h2
+            style="color:#2c3e50; font-size:12px; text-align:center; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px;">
+            FISH MARKET</h2>
+        <div id="market-list"></div>
+        <div id="market-total"
+            style="color: #27ae60; font-size: 8px; margin-bottom: 15px; text-align: center; display: none; background: #e8f8f5; padding: 10px; border: 2px solid #2ecc71;">
+        </div>
+
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="showTotalPrice()" class="btn" style="background:#2980b9; flex: 1;">TOTAL PRICE</button>
+            <button onclick="sellAllMarket()" class="btn" style="background:#27ae60; flex: 1;">SELL ALL</button>
+            <button onclick="closeAll()" class="btn" style="background:#c62828; flex: 100%; margin-top: 5px;">CLOSE
+                [ESC]</button>
+        </div>
+    </div>
+
+    <div id="hit-btn" onmousedown="handleHit()">STRIKE!</div>
+    <canvas id="game"></canvas>
+
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.onresize = res; res();
+
+        let money = 200, hp = 100, ox = 100, hasBoat = false, inBoat = false, boatX = 1000;
+        let travelingMerchant = { x: -11000, dx: 0.8, items: [
+            { n: "Void Rod", p: 250000, id: "void" },
+            { n: "Abyssal Lure", p: 100000, id: "abyssal_lure" }
+        ] };
+        let inventory = [];
+        let caughtFishIds = new Set();
+        let hitsLeft = 0, currentFish = null;
+        let fightInProgress = false;
+        let hitTimeout = null;
+        let rodPowerUpgrades = {};
+        const groundY = canvas.height - 180;
+        let clouds = Array.from({ length: 10 }, () => ({ x: Math.random() * 10000 - 2000, y: Math.random() * 150 + 20, s: Math.random() * 0.5 + 0.2 }));
+
+        // QUESTY ESKYMÁKA (text odstraněn, generuje se dynamicky)
+        let currentQuestIdx = 0;
+        const eskimoQuests = [
+            { targetId: 18, count: 2, rewardText: "Special meat", reward: { type: 'bait', id: 'maso' } },
+            { targetId: 21, count: 1, rewardText: "Ice spear", reward: { type: 'rod', id: 'ledovy' } }
+        ];
+
+        // DATA PRUTŮ
+        let currentRodId = "starter";
+        let ownedRodIds = ["starter"];
+        const rodsData = {
+            "starter": { n: "Wooden", c: "#5d4037", p: 1, l: 0, v: "|||", thickness: 3 },
+            "bambus": { n: "Bamboo", c: "#cd853f", p: 2, l: 0, v: "[=]", thickness: 4 },
+            "laminat": { n: "Fiberglass", c: "#a1887f", p: 3, l: 0, v: "===", thickness: 4 },
+            "karbon": { n: "Carbon", c: "#2c3e50", p: 4, l: 1, v: ">>>", thickness: 5 },
+            "titan": { n: "Titanium", c: "#90a4ae", p: 5, l: 1, v: "{#}", thickness: 6 },
+            "ocel": { n: "Steel", c: "#95a5a6", p: 7, l: 1, v: "<#>", thickness: 7 },
+            "neon": { n: "Neon", c: "#00ffcc", p: 12, l: 2, v: "~.~", thickness: 4 },
+            "safir": { n: "Sapphire", c: "#2980b9", p: 18, l: 2, v: "(*)", thickness: 5 },
+            "zlaty": { n: "Golden", c: "#f1c40f", p: 25, l: 3, v: "{*}", thickness: 6 },
+            "ledovy": { n: "Ice spear", c: "#84ffff", p: 35, l: 3, v: "==>", thickness: 5 },
+            "temny": { n: "Renforced titanium neon", c: "#4000ffff", p: 50, l: 5, v: "???", thickness: 5 },
+            "void": { n: "Void Rod", c: "#8e44ad", p: 100, l: 5, v: "###", thickness: 6 }
+
+        };
+
+
+        // DATA NÁVNAD
+        let currentBaitId = "none";
+        let ownedBaitIds = ["none"];
+        const baitsData = {
+            "none": { n: "Bare hook", v: "J" },
+            "chleba": { n: "Bread", v: "🍞" },
+            "testo": { n: "Dough", v: "🥟" },
+            "zizala": { n: "Worm", v: "🪱" },
+            "moucha": { n: "Artificial fly", v: "🦟" },
+            "trpytka": { n: "Spinner", v: "✨" },
+            "wobler": { n: "Wobler", v: "🐟" },
+            "maso": { n: "Special meat", v: "🥩" },
+            "chobotnice": { n: "Squid", v: "🦑" },
+            "diamant": { n: "Diamond Lure", v: "💎" },
+            "abyssal_lure": { n: "Abyssal Lure", v: "👁️" }
+        };
+
+        // MECHANIKA LODÍ (Vylepšená hloubka kokpitu pro posazení kamaráda)
+        let boatType = "motorovka";
+        let isTrolling = false;
+        let trollingTimer = 0;
+        const boatsData = {
+            "motorovka": { n: "Motorboat", p: 500, hasTrolling: false, speed: 18, cockpitDepth: 18 },
+            "jachta": { n: "Pro Yacht", p: 15000, hasTrolling: true, speed: 22, cockpitDepth: 25 },
+            "ponorka": { n: "Abyssal Sub", p: 150000, hasTrolling: true, speed: 30, cockpitDepth: 40 }
+        };
+
+        // OSTROVY (Vylepšená grafika ledu)
+        const islands = [
+            {
+                x: -9000, w: 1500, name: "Ice Kingdom", colorTop: "#ffffff", colorBot: "#4dd0e1", shopPos: -8500, iglooPos: -7800, shopType: "stone", hasLighthouse: false, treeOffsets: [], items: [
+                    { n: "Soup (HP)", p: 250, heal: 100 }, { n: "Medkit", p: 100, heal: 50 }
+                ]
+            },
+            {
+                x: -3500, w: 1000, name: "Western Cliffs", colorTop: "#78909c", colorBot: "#455a64", shopPos: -3000, shopType: "stone", hasLighthouse: true, treeOffsets: [], items: [
+                    { n: "Carbon R.", p: 400, id: "karbon" }, { n: "Titanium R.", p: 900, id: "titan" }, { n: "Medkit", p: 100, heal: 50 }
+                ]
+            },
+            {
+                x: 500, w: 1200, name: "Coast", colorTop: "#81c784", colorBot: "#5d4037", shopPos: 800, marketPos: 1300, shopType: "wood", hasTrees: true,
+                treeOffsets: [200, 350, 600, 750, 1000],
+                items: [
+                    { n: "Motorboat", p: boatsData.motorovka.p, getBoat: "motorovka" }, { n: "Pro Yacht", p: boatsData.jachta.p, getBoat: "jachta" },
+                    { n: "Bamboo R.", p: 150, id: "bambus" }, { n: "Fiberglass R.", p: 280, id: "laminat" }
+                ]
+            },
+            {
+                x: 6000, w: 1400, name: "Tropics", colorTop: "#fff59d", colorBot: "#d7ccc8", shopPos: 6900, baitShopPos: 6400, shopType: "bamboo", hasLighthouse: true, hasTrees: true,
+                treeOffsets: [150, 300, 450, 1000, 1150],
+                items: [
+                    { n: "Neon R.", p: 2500, id: "neon" }, { n: "Sapphire R.", p: 4500, id: "safir" },
+                    { n: "Golden Rod", p: 8000, id: "zlaty" }, { n: "Dark matter", p: 20000, id: "temny" }
+                ],
+                baitItems: [
+                    { n: "Bread", p: 100, id: "chleba" }, { n: "Worm", p: 300, id: "zizala" },
+                    { n: "Dough", p: 800, id: "testo" }, { n: "Artificial fly", p: 1200, id: "moucha" },
+                    { n: "Spinner", p: 2000, id: "trpytka" }, { n: "Pro Wobbler", p: 5000, id: "wobler" },
+                    { n: "Squid", p: 9000, id: "chobotnice" }
+                ]
+            },
+            {
+                x: 11000, w: 1200, name: "Abyssal Rock", colorTop: "#7f8c8d", colorBot: "#2c3e50", upgradePos: 11800, shopPos: 11400, shopType: "stone", hasLighthouse: true, treeOffsets: [], items: [
+                    { n: "Abyssal Sub", p: 150000, getBoat: "ponorka" },
+                    { n: "Diamond Lure", p: 50000, id: "diamant" }
+                ]
+            }
+        ];
+
+        const fishTable = [
+            { id: 0, n: "Sardine", r: 40, h: 4, z: "Coast", minW: 0.1, maxW: 0.4, i: "🐟" },
+            { id: 1, n: "Carp", r: 110, h: 8, z: "Coast", minW: 1.5, maxW: 6.0, i: "🐠" },
+            { id: 7, n: "Bream", r: 250, h: 12, z: "Coast", minW: 1.0, maxW: 4.5, i: "🐠", reqBait: "chleba" },
+            { id: 9, n: "Tench", r: 1500, h: 35, z: "Coast", minW: 2.0, maxW: 6.0, i: "🐟", reqBait: "testo" },
+            { id: 12, n: "Crucian", r: 180, h: 10, z: "Coast", minW: 0.5, maxW: 2.0, i: "🐟", reqBait: "chleba" },
+            { id: 17, n: "Goldfish", r: 50000, h: 30, z: "Coast", minW: 0.1, maxW: 0.5, i: "✨", reqBait: "testo" },
+            { id: 22, n: "Roach", r: 70, h: 6, z: "Coast", minW: 0.2, maxW: 0.8, i: "🐟" },
+            { id: 23, n: "Grass Carp", r: 800, h: 28, z: "Coast", minW: 3.0, maxW: 15.0, i: "🐠", reqBait: "chleba" },
+            { id: 2, n: "Perch", r: 280, h: 15, z: "Western Cliffs", minW: 0.5, maxW: 2.5, i: "🐟" },
+            { id: 3, n: "Cod", r: 550, h: 25, z: "Western Cliffs", minW: 3.0, maxW: 12.0, i: "🐡" },
+            { id: 8, n: "Eel", r: 600, h: 22, z: "Western Cliffs", minW: 1.5, maxW: 5.0, i: "🐍", reqBait: "zizala" },
+            { id: 13, n: "Catfish", r: 4000, h: 75, z: "Western Cliffs", minW: 10.0, maxW: 80.0, i: "🐟", reqBait: "maso" },
+            { id: 14, n: "Zander", r: 2800, h: 50, z: "Western Cliffs", minW: 2.0, maxW: 12.0, i: "🐠", reqBait: "trpytka" },
+            { id: 24, n: "Grayling", r: 450, h: 18, z: "Western Cliffs", minW: 0.4, maxW: 1.2, i: "🐟", reqBait: "moucha" },
+            { id: 4, n: "Tuna", r: 1200, h: 45, z: "Tropics", minW: 20.0, maxW: 150.0, i: "🐟" },
+            { id: 11, n: "Sailfish", r: 15000, h: 140, z: "Tropics", minW: 30.0, maxW: 100.0, i: "🐬", reqBait: "wobler" },
+            { id: 15, n: "Barracuda", r: 8000, h: 95, z: "Tropics", minW: 5.0, maxW: 40.0, i: "🦈", reqBait: "trpytka" },
+            { id: 16, n: "Marlin", r: 25000, h: 180, z: "Tropics", minW: 50.0, maxW: 400.0, i: "🐬", reqBait: "wobler" },
+            { id: 25, n: "Trevally", r: 3500, h: 70, z: "Tropics", minW: 10.0, maxW: 50.0, i: "🐟", reqBait: "zizala" },
+            { id: 26, n: "Mahi-mahi", r: 6000, h: 85, z: "Tropics", minW: 8.0, maxW: 30.0, i: "🐠", reqBait: "trpytka" },
+            { id: 18, n: "Ice Cod", r: 900, h: 25, z: "Ice Kingdom", minW: 2.0, maxW: 10.0, i: "🐟" },
+            { id: 19, n: "Walrus", r: 3000, h: 60, z: "Ice Kingdom", minW: 100.0, maxW: 350.0, i: "🦭" },
+            { id: 21, n: "Narwhal", r: 20000, h: 130, z: "Ice Kingdom", minW: 800.0, maxW: 1600.0, i: "🦄", reqBait: "moucha" },
+            { id: 20, n: "Orca", r: 45000, h: 220, z: "Ice Kingdom", minW: 2000.0, maxW: 6000.0, i: "🐋", reqBait: "maso" },
+            { id: 5, n: "Shark", r: 4500, h: 90, z: "Ocean", minW: 150.0, maxW: 800.0, i: "🦈", reqBait: "maso" },
+            { id: 10, n: "Pike", r: 3500, h: 65, z: "Ocean", minW: 4.0, maxW: 25.0, i: "🦈", reqBait: "trpytka" },
+            { id: 27, n: "Swordfish", r: 18000, h: 160, z: "Ocean", minW: 100.0, maxW: 500.0, i: "🐬", reqBait: "wobler" },
+            { id: 6, n: "KRAKEN", r: 75000, h: 400, z: "Abyss", minW: 2000.0, maxW: 10000.0, i: "🦑", reqBait: "chobotnice" },
+            { id: 28, n: "Anglerfish", r: 12000, h: 150, z: "Abyss", minW: 30.0, maxW: 80.0, i: "🐙", reqBait: "maso" },
+            { id: 28, n: "Deep Sea Leviathan", r: 90000, h: 600, z: "Abyss", minW: 6000.0, maxW: 7500.0, i: "🐍", reqBait: "diamant" },
+            { id: 29, n: "Giant Halibut", r: 15000, h: 120, z: "Ocean", minW: 50.0, maxW: 200.0, i: "🐠", isTrolling: true, reqBait: "maso" },
+            { id: 30, n: "Great White", r: 60000, h: 300, z: "Abyss", minW: 1000.0, maxW: 3000.0, i: "🦈", isTrolling: true, reqBait: "chobotnice" }
+        ];
+
+        let player = { x: 1200, y: groundY, dx: 0, dy: 0, dir: 1, fishing: false };
+        let keys = {};
+
+        function toggleSection(boxId, iconId) {
+            const box = document.getElementById(boxId);
+            const icon = document.getElementById(iconId);
+            box.style.display = (box.style.display === "none") ? "block" : "none";
+            icon.innerText = (box.style.display === "none") ? "▶" : "▼";
+        }
+
+        function handleSelectionWheel(e, type) {
+            e.preventDefault();
+            let arr = (type === 'rod') ? ownedRodIds : ownedBaitIds;
+            let current = (type === 'rod') ? currentRodId : currentBaitId;
+            if (arr.length <= 1 || player.fishing) return;
+            let idx = arr.indexOf(current);
+            idx = e.deltaY > 0 ? (idx + 1) % arr.length : (idx - 1 + arr.length) % arr.length;
+            if (type === 'rod') currentRodId = arr[idx];
+            else currentBaitId = arr[idx];
+            updateHUD();
+        }
+
+        function handleEskimo() {
+            if (currentQuestIdx >= eskimoQuests.length) {
+                return;
+            }
+            let q = eskimoQuests[currentQuestIdx];
+            let fishInInv = inventory.filter(f => f.id === q.targetId);
+
+            if (fishInInv.length >= q.count) {
+                for (let i = 0; i < q.count; i++) {
+                    let idx = inventory.findIndex(f => f.id === q.targetId);
+                    inventory.splice(idx, 1);
+                }
+                if (q.reward.type === 'rod') { ownedRodIds.push(q.reward.id); currentRodId = q.reward.id; }
+                if (q.reward.type === 'bait') { ownedBaitIds.push(q.reward.id); currentBaitId = q.reward.id; }
+                showMsg("THANKS! YOU GOT -> " + q.rewardText);
+                currentQuestIdx++; updateHUD();
+            }
+        }
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === "Escape") closeAll();
+
+            if (e.code === "KeyT" && inBoat && boatsData[boatType].hasTrolling && !isFighting) {
+                isTrolling = !isTrolling;
+                trollingTimer = 0;
+                showMsg(isTrolling ? "TROLLING ON - Keep course to fish!" : "TROLLING OFF");
+                updateHUD();
+            }
+
+            if (e.code === "KeyE" && hasBoat && !player.fishing && !isFighting) {
+                if (inBoat) {
+                    let land = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
+                    if (land) { inBoat = false; boatX = player.x; isTrolling = false; }
+                    else showMsg("YOU CAN ONLY DISEMBARK ON LAND!");
+                } else {
+                    if (Math.abs(player.x - boatX) < 150) inBoat = true;
+                    else showMsg("YOU ARE TOO FAR FROM THE BOAT!");
+                }
+            }
+
+            if (e.code === "KeyF" && !player.fishing && !isFighting && !isTrolling) startFishing();
+
+            if (e.code === "Enter" && !inBoat) {
+                let activeIsland = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
+                if (activeIsland) {
+                    if (Math.abs(player.x - activeIsland.shopPos) < 120) openShop(activeIsland.items, "SHOP - GEAR");
+                    else if (activeIsland.marketPos && Math.abs(player.x - activeIsland.marketPos) < 120) openMarket();
+                    else if (activeIsland.baitShopPos && Math.abs(player.x - activeIsland.baitShopPos) < 120) openShop(activeIsland.baitItems, "SHOP - BAITS");
+                    else if (activeIsland.iglooPos && Math.abs(player.x - activeIsland.iglooPos) < 120) handleEskimo();
+                    else if (activeIsland.upgradePos && Math.abs(player.x - activeIsland.upgradePos) < 120) openUpgradeShop();
+                }
+                if (Math.abs(player.x - travelingMerchant.x) < 150) {
+                    openShop(travelingMerchant.items, "WANDERING MERCHANT");
+                }
+            }
+        });
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function showMsg(text) {
+            const m = document.getElementById("msg"); m.innerText = text;
+            m.style.display = "block"; setTimeout(() => m.style.display = "none", 3000);
+        }
+
+        function openMarket() {
+            const list = document.getElementById("market-list");
+            list.innerHTML = "";
+            document.getElementById("market-total").style.display = "none";
+            if (inventory.length === 0) { list.innerHTML = "<div style='text-align:center; padding: 20px; color: #7f8c8d;'>Backpack is empty!</div>"; }
+            else {
+                inventory.forEach((item, index) => {
+                    const f = fishTable.find(x => x.id === item.id);
+                    let price = getFishPrice(item);
+                    list.innerHTML += `<div class="market-row"><span>${f.i} ${f.n} <span style="color:#7f8c8d;">(${item.weight}kg)</span></span>
+                <span><span style="color:#2ecc71; margin-right: 15px; font-weight: bold;">$${price}</span>
+                <button class="market-btn" onclick="sellSingleFish(${index})">SELL</button></span></div>`;
+                });
+            }
+            document.getElementById("marketModal").style.display = "block";
+        }
+
+        function getFishPrice(item) {
+            const f = fishTable.find(x => x.id === item.id);
+            let avgW = (f.minW + f.maxW) / 2;
+            return Math.floor(f.r * (item.weight / avgW));
+        }
+
+        function sellSingleFish(index) {
+            money += getFishPrice(inventory[index]);
+            inventory.splice(index, 1);
+            updateHUD(); openMarket();
+        }
+
+        function sellAllMarket() {
+            if (inventory.length === 0) return;
+            let total = inventory.reduce((sum, item) => sum + getFishPrice(item), 0);
+            money += total; inventory = [];
+            showMsg(`SOLD ALL FOR $${total}`);
+            updateHUD(); closeAll();
+        }
+
+        function showTotalPrice() {
+            if (inventory.length === 0) return;
+            let total = inventory.reduce((sum, item) => sum + getFishPrice(item), 0);
+            const tDiv = document.getElementById("market-total");
+            tDiv.innerText = `TOTAL CATCH VALUE: $${total}`;
+            tDiv.style.display = "block";
+        }
+
+        function openUpgradeShop() {
+            let lvl = rodPowerUpgrades[currentRodId] || 0;
+            let cost = 10000 + (lvl * 15000);
+            document.getElementById("shopTitle").innerText = "THE UPGRADER - " + rodsData[currentRodId].n;
+            const grid = document.getElementById("shopGrid"); grid.innerHTML = "";
+            const btn = document.createElement("button"); btn.className = "btn";
+            if (lvl >= 20) {
+                btn.innerHTML = `MAX LEVEL REACHED<br>Lvl. 20`;
+                btn.style.background = "#555";
+                btn.onclick = () => { showMsg("ROD IS AT MAXIMUM LEVEL!"); };
+            } else {
+                btn.innerHTML = `UPGRADE POWER<br>Lvl. ${lvl} -> Lvl. ${lvl + 1}<br><span style="color:#aed581; font-size: 8px;">$${cost}</span>`;
+                btn.onclick = () => {
+                    if (money >= cost) {
+                        money -= cost;
+                        rodPowerUpgrades[currentRodId] = lvl + 1;
+                        showMsg("ROD POWER UPGRADED! FASTER FISHING!");
+                        updateHUD(); closeAll();
+                    } else showMsg("NOT ENOUGH MONEY!");
+                };
+            }
+            grid.appendChild(btn);
+            document.getElementById("shopModal").style.display = "block";
+        }
+
+        function openShop(items, title) {
+            document.getElementById("shopTitle").innerText = title;
+            const grid = document.getElementById("shopGrid"); grid.innerHTML = "";
+            items.forEach(i => {
+                const btn = document.createElement("button"); btn.className = "btn";
+                btn.innerHTML = `${i.n}<br><span style="color:#aed581; font-size: 8px;">$${i.p}</span>`;
+                btn.onclick = () => {
+                    if (money >= i.p) {
+                        if (i.getBoat) {
+                            if (hasBoat && boatType === i.getBoat) { showMsg("YOU ALREADY HAVE THIS BOAT!"); return; }
+                            hasBoat = true; inBoat = true; boatX = player.x; boatType = i.getBoat;
+                            money -= i.p; showMsg(`BOUGHT: ${boatsData[boatType].n}!`);
+                        } else if (i.id) {
+                            if (rodsData[i.id] && ownedRodIds.includes(i.id)) { showMsg("YOU ALREADY HAVE THIS ROD!"); return; }
+                            if (baitsData[i.id] && ownedBaitIds.includes(i.id)) { showMsg("YOU ALREADY HAVE THIS BAIT!"); return; }
+                            money -= i.p;
+                            if (rodsData[i.id]) { ownedRodIds.push(i.id); currentRodId = i.id; }
+                            else if (baitsData[i.id]) { ownedBaitIds.push(i.id); currentBaitId = i.id; }
+                            showMsg("BOUGHT!");
+                        } else if (i.heal) {
+                            money -= i.p; hp = Math.min(100, hp + i.heal); showMsg("HP RESTORED!");
+                        }
+                        updateHUD(); closeAll();
+                    } else showMsg("NOT ENOUGH MONEY!");
+                };
+                grid.appendChild(btn);
+            });
+            document.getElementById("shopModal").style.display = "block";
+        }
+
+        function closeAll() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+
+        function startFishing() {
+            if (inventory.length >= 15) { showMsg("BACKPACK IS FULL!"); return; }
+            let zone = getZone();
+            let pLvl = rodPowerUpgrades[currentRodId] || 0;
+            let rodPower = rodsData[currentRodId].p + pLvl;
+            let rodLuck = rodsData[currentRodId].l || 0;
+
+            let possible = fishTable.filter(f =>
+                (f.z === zone || f.z === "Ocean" || (zone === "Abyss" && f.z === "Abyss")) &&
+                (!f.isTrolling) &&
+                (!f.reqBait || f.reqBait === currentBaitId)
+            );
+
+            if (possible.length === 0) { showMsg("NOTHING IS BITING! TRY DIFFERENT ZONE OR BAIT."); return; }
+
+            possible.sort((a, b) => a.r - b.r);
+            let fishIdx = Math.floor(Math.random() * possible.length);
+            for (let i = 0; i < rodLuck; i++) {
+                if (Math.random() < 0.25 && fishIdx < possible.length - 1) fishIdx++;
+            }
+            currentFish = possible[fishIdx];
+
+            player.fishing = true;
+            showMsg("WAITING FOR A BITE...");
+
+            setTimeout(() => {
+                if (player.fishing && !fightInProgress) {
+                    hitsLeft = Math.ceil(currentFish.h / rodPower);
+                    isFighting = true;
+                    fightInProgress = true;
+                    spawnHit();
+                }
+            }, 1500 + Math.random() * 2000);
+        }
+
+        function handleTrolling() {
+            if (!isTrolling || !inBoat || inventory.length >= 15 || isFighting || fightInProgress || Math.abs(player.dx) < 5) return;
+
+            trollingTimer++;
+            if (trollingTimer > 120) {
+                trollingTimer = 0;
+                let zone = getZone();
+                let pLvl = rodPowerUpgrades[currentRodId] || 0;
+                let rodPower = rodsData[currentRodId].p + pLvl;
+                let rodLuck = rodsData[currentRodId].l || 0;
+
+                let possible = fishTable.filter(f => f.isTrolling && (f.z === zone || zone === "Ocean") && f.reqBait === currentBaitId);
+
+                if (possible.length > 0 && Math.random() < 0.05 + (rodLuck * 0.01)) {
+                    possible.sort((a, b) => a.r - b.r);
+                    let fishIdx = Math.floor(Math.random() * possible.length);
+                    for (let i = 0; i < rodLuck; i++) {
+                        if (Math.random() < 0.25 && fishIdx < possible.length - 1) fishIdx++;
+                    }
+                    currentFish = possible[fishIdx];
+                    isFighting = true;
+                    fightInProgress = true;
+                    isTrolling = false;
+                    hitsLeft = Math.ceil(currentFish.h / rodPower);
+                    showMsg(`TROLLING BITE: ${currentFish.n}!`);
+                    spawnHit();
+                }
+            }
+        }
+
+        function fishEscaped() {
+            isFighting = false;
+            fightInProgress = false;
+            player.fishing = false;
+            document.getElementById('hit-btn').style.display = 'none';
+            showMsg("FISH ESCAPED! YOU WERE TOO SLOW.");
+            updateHUD();
+        }
+
+        function spawnHit() {
+            const btn = document.getElementById('hit-btn');
+            if (!isFighting) {
+                btn.style.display = 'none';
+                fightInProgress = false;
+                clearTimeout(hitTimeout);
+                return;
+            }
+
+            let randomLeft = 15 + Math.random() * 70;
+            let randomTop = 25 + Math.random() * 50;
+
+            btn.style.left = randomLeft + '%';
+            btn.style.top = randomTop + '%';
+            btn.style.display = 'flex';
+
+            let pLvl = rodPowerUpgrades[currentRodId] || 0;
+            let rodPower = rodsData[currentRodId].p + pLvl;
+            let fishDiff = currentFish.h;
+
+            let timeLimit = 2200 + (rodPower * 30) - (fishDiff * 8);
+            if (timeLimit < 600) timeLimit = 600;
+
+            clearTimeout(hitTimeout);
+            hitTimeout = setTimeout(fishEscaped, timeLimit);
+        }
+
+        function handleHit() {
+            if (!isFighting) return;
+            clearTimeout(hitTimeout);
+            hitsLeft--;
+
+            if (hitsLeft <= 0) {
+                isFighting = false;
+                fightInProgress = false;
+                player.fishing = false;
+                let w = (Math.random() * (currentFish.maxW - currentFish.minW) + currentFish.minW).toFixed(1);
+                inventory.push({ id: currentFish.id, weight: parseFloat(w) });
+                caughtFishIds.add(currentFish.id);
+                showMsg(`CAUGHT: ${currentFish.n} (${w}kg)`);
+                document.getElementById('hit-btn').style.display = 'none';
+                updateHUD();
+            } else {
+                spawnHit();
+            }
+        }
+
+        function getZone() {
+            if (player.x < -10000 || player.x > 9500) return "Abyss";
+            let isl = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
+            return isl ? isl.name : "Ocean";
+        }
+
+        function updateHUD() {
+            document.getElementById("money").innerText = Math.floor(money);
+            document.getElementById("ox-bar").style.width = ox + "%";
+            document.getElementById("hp-bar").style.width = hp + "%";
+            document.getElementById("loc-name").innerText = getZone().toUpperCase();
+            document.getElementById("loc-pos").innerText = Math.floor(player.x);
+            document.getElementById("trolling-indicator").style.display = isTrolling ? "inline" : "none";
+            document.getElementById("inv-count").innerText = inventory.length;
+
+            if (document.getElementById("rod-box").style.display !== "none") drawRodCatalog();
+            if (document.getElementById("bait-box").style.display !== "none") drawBaitCatalog();
+            if (document.getElementById("inv-box").style.display !== "none") drawInventoryList();
+            if (document.getElementById("cat-box").style.display !== "none") drawFishCatalog();
+
+            let nearest = islands.reduce((prev, curr) => (Math.abs(curr.x - player.x) < Math.abs(prev.x - player.x) ? curr : prev));
+            let guide = (getZone() === "Ocean" || getZone() === "Abyss") ? (player.x < nearest.x ? "LEFT -> " + nearest.name : nearest.name + " <- RIGHT") : "";
+            document.getElementById("guide").innerText = guide;
+            
+            let mGuide = (player.x < travelingMerchant.x ? "LEFT -> WANDERER" : "WANDERER <- RIGHT");
+            if (Math.abs(player.x - travelingMerchant.x) < 300) mGuide = "WANDERER IS HERE!";
+            document.getElementById("merchant-guide").innerText = mGuide;
+        }
+
+        function drawRodCatalog() {
+            const rCat = document.getElementById("rod-catalog"); rCat.innerHTML = "";
+            ownedRodIds.forEach(id => {
+                const r = rodsData[id];
+                let pLvl = rodPowerUpgrades[id] || 0;
+                let displayPower = r.p + pLvl;
+                let luckStr = r.l > 0 ? ` <span style="color:#f1c40f;">(LUCK: ${r.l})</span>` : '';
+                rCat.innerHTML += `<div class="row" style="opacity:${id === currentRodId ? 1 : 0.4}">
+            <span>${r.n}${luckStr}${id === currentRodId ? ' <span class="active-tag">IN HAND</span>' : ''}</span>
+            <span>Power:${displayPower} ${r.v}</span></div>`;
+            });
+        }
+        function drawBaitCatalog() {
+            const bCat = document.getElementById("bait-catalog"); bCat.innerHTML = "";
+            ownedBaitIds.forEach(id => {
+                const b = baitsData[id];
+                bCat.innerHTML += `<div class="row" style="opacity:${id === currentBaitId ? 1 : 0.4}">
+            <span>${b.n}${id === currentBaitId ? ' <span class="active-tag" style="background:#e67e22;">ON HOOK</span>' : ''}</span>
+            <span>${b.v}</span></div>`;
+            });
+        }
+        function drawInventoryList() {
+            const invL = document.getElementById("inventory-list"); invL.innerHTML = "";
+            if (inventory.length === 0) invL.innerHTML = `<div style="text-align:center; color:#aaa; padding:5px;">Empty</div>`;
+            else inventory.forEach(item => {
+                const f = fishTable.find(x => x.id === item.id);
+                invL.innerHTML += `<div class="row"><span>${f.i} ${f.n}</span><span class="weight-badge">${item.weight} kg</span></div>`;
+            });
+        }
+        function drawFishCatalog() {
+            const cat = document.getElementById("catalog"); cat.innerHTML = "";
+            fishTable.forEach(f => {
+                const ok = caughtFishIds.has(f.id);
+                let baitIcon = f.reqBait ? ` [${baitsData[f.reqBait].v}]` : '';
+                let zoneInfo = f.isTrolling ? '(Trolling)' : `(${f.z})`;
+                cat.innerHTML += `<div class="row" style="opacity:${ok ? 1 : 0.3}">
+            <span>${ok ? f.i + ' ' + f.n + baitIcon : '???'} <span style="font-size:5px; color:#7f8c8d;">${ok ? zoneInfo : ''}</span></span>
+            <span>${ok ? '$' + f.r : '---'}</span></div>`;
+            });
+        }
+
+        function drawFloatingText(text, x, y, width = 90) {
+            ctx.fillStyle = "rgba(0,0,0,0.7)";
+            ctx.roundRect(x - width / 2, y - 15, width, 20, 5); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.font = "8px 'Press Start 2P'"; ctx.textAlign = "center";
+            ctx.fillText(text, x, y - 1); ctx.textAlign = "left";
+        }
+
+        // Funkce pro vykreslení bubliny s textem (pixelart styl)
+        function drawBubble(text, x, y, maxWidth = 160) {
+            ctx.font = "7px 'Press Start 2P'";
+            const words = text.split(' ');
+            let lines = [];
+            let currentLine = words[0];
+
+            for (let i = 1; i < words.length; i++) {
+                let width = ctx.measureText(currentLine + " " + words[i]).width;
+                if (width < maxWidth) {
+                    currentLine += " " + words[i];
+                } else {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                }
+            }
+            lines.push(currentLine);
+
+            const lineHeight = 11;
+            const bubbleHeight = lines.length * lineHeight + 18;
+            const bubbleWidth = maxWidth + 20;
+            const bubbleX = x - bubbleWidth / 2;
+            const bubbleY = y - bubbleHeight - 12; // Posunuto výše
+
+            // Vykreslení stínu bubliny
+            ctx.fillStyle = "rgba(0,0,0,0.2)";
+            ctx.fillRect(bubbleX + 3, bubbleY + 3, bubbleWidth, bubbleHeight);
+
+            // Vykreslení těla bubliny
+            ctx.fillStyle = "#fff";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.fillRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight);
+            ctx.strokeRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight);
+
+            // Vykreslení ocásku bubliny
+            ctx.beginPath();
+            ctx.moveTo(x - 8, bubbleY + bubbleHeight);
+            ctx.lineTo(x, bubbleY + bubbleHeight + 10);
+            ctx.lineTo(x + 8, bubbleY + bubbleHeight);
+            ctx.closePath();
+            ctx.fillStyle = "#fff";
+            ctx.fill();
+            ctx.strokeStyle = "#000";
+            ctx.stroke();
+
+            // Vykreslení textu v bublině
+            ctx.fillStyle = "#000";
+            ctx.textAlign = "left";
+            lines.forEach((line, index) => {
+                ctx.fillText(line, bubbleX + 10, bubbleY + 16 + index * lineHeight);
+            });
+        }
+
+        function drawCrab(cx, cy) {
+            ctx.fillStyle = "#e74c3c"; ctx.fillRect(cx - 4, cy - 3, 8, 5);
+            ctx.fillRect(cx - 6, cy - 5, 3, 3); ctx.fillRect(cx + 3, cy - 5, 3, 3);
+            ctx.fillStyle = "#000"; ctx.fillRect(cx - 3, cy - 4, 1, 1); ctx.fillRect(cx + 2, cy - 4, 1, 1);
+        }
+        function drawFish(cx, cy, dir, color) {
+            ctx.save(); ctx.translate(cx, cy); ctx.scale(dir, 1);
+            ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(0, 0, 4, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(-8, -2.5); ctx.lineTo(-8, 2.5); ctx.fill();
+            ctx.fillStyle = "#000"; ctx.fillRect(2, -1, 1, 1);
+            ctx.restore();
+        }
+        function drawPufferfish(cx, cy, dir) {
+            ctx.save(); ctx.translate(cx, cy); ctx.scale(dir, 1);
+            ctx.fillStyle = "#f39c12"; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(1.5, -1, 1.5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(2, -1, 0.5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#e67e22"; ctx.fillRect(-2, -5, 1, 2); ctx.fillRect(1, -5, 1, 2); ctx.fillRect(-2, 3, 1, 2); ctx.fillRect(1, 3, 1, 2);
+            ctx.restore();
+        }
+        function drawTurtle(cx, cy, dir) {
+            ctx.save(); ctx.translate(cx, cy); ctx.scale(dir, 1);
+            ctx.fillStyle = "#27ae60"; ctx.beginPath(); ctx.arc(0, 0, 5, Math.PI, 0); ctx.fill();
+            ctx.fillStyle = "#2ecc71"; ctx.beginPath(); ctx.arc(5, 0, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.fillRect(-4, 0, 2, 3); ctx.fillRect(2, 0, 2, 3);
+            ctx.fillStyle = "#000"; ctx.fillRect(6, -1, 1, 1);
+            ctx.restore();
+        }
+        function drawStarfish(cx, cy) {
+            ctx.save(); ctx.translate(cx, cy); ctx.fillStyle = "#e67e22"; ctx.beginPath();
+            for (let i = 0; i < 5; i++) {
+                let a = i * Math.PI * 0.4 - Math.PI / 2;
+                ctx.lineTo(Math.cos(a) * 3, Math.sin(a) * 3);
+                a += Math.PI * 0.2;
+                ctx.lineTo(Math.cos(a) * 1.5, Math.sin(a) * 1.5);
+            }
+            ctx.fill(); ctx.restore();
+        }
+        function drawShell(cx, cy) {
+            ctx.fillStyle = "#fdf2e9"; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI, true); ctx.fill(); ctx.fillRect(cx - 3, cy, 6, 1.5);
+        }
+        function drawKelp(cx, cy, height, phase) {
+            ctx.strokeStyle = "#27ae60"; ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(cx, cy);
+            let y = cy, x = cx;
+            for (let i = 0; i < height; i++) { y -= 4; x = cx + Math.sin(phase + i * 0.5) * 3; ctx.lineTo(x, y); }
+            ctx.stroke();
+        }
+        function drawCoral(cx, cy) {
+            ctx.fillStyle = "#e74c3c"; ctx.fillRect(cx - 4, cy - 20, 8, 20); ctx.fillRect(cx - 12, cy - 14, 8, 8); ctx.fillRect(cx + 4, cy - 10, 7, 7);
+        }
+        function drawRock(cx, cy, size) {
+            ctx.fillStyle = "#7f8c8d"; ctx.beginPath(); ctx.arc(cx, cy, size, 0, Math.PI, true); ctx.fill();
+            ctx.fillStyle = "#95a5a6"; ctx.beginPath(); ctx.arc(cx - size / 4, cy, size / 2, 0, Math.PI, true); ctx.fill();
+        }
+        function drawOctopus(cx, cy) {
+            ctx.fillStyle = "#8e44ad"; ctx.beginPath(); ctx.arc(cx, cy - 3, 4, 0, Math.PI * 2); ctx.fill(); ctx.fillRect(cx - 4, cy - 3, 8, 3);
+            ctx.fillRect(cx - 4, cy, 2, 3); ctx.fillRect(cx - 1, cy, 2, 3); ctx.fillRect(cx + 2, cy, 2, 3);
+            ctx.fillStyle = "#fff"; ctx.fillRect(cx - 2, cy - 4, 2, 2); ctx.fillRect(cx + 1, cy - 4, 2, 2);
+            ctx.fillStyle = "#000"; ctx.fillRect(cx - 1, cy - 3, 1, 1); ctx.fillRect(cx + 2, cy - 3, 1, 1);
+        }
+        function drawShrimp(cx, cy, dir) {
+            ctx.save(); ctx.translate(cx, cy); ctx.scale(dir, 1);
+            ctx.fillStyle = "#ff7f50"; ctx.beginPath(); ctx.arc(0, -2, 2, 0, Math.PI, true); ctx.fill(); ctx.fillRect(-3, -2, 4, 2); ctx.fillRect(-4, 0, 2, 2);
+            ctx.strokeStyle = "#ff7f50"; ctx.beginPath(); ctx.moveTo(2, -2); ctx.lineTo(4, 0); ctx.stroke();
+            ctx.fillStyle = "#000"; ctx.fillRect(1, -3, 1, 1);
+            ctx.restore();
+        }
+        function drawSquid(cx, cy, dir) {
+            ctx.save(); ctx.translate(cx, cy); ctx.scale(dir, 1);
+            ctx.fillStyle = "#e0f2f1"; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(-4, -2); ctx.lineTo(-4, 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(-3, 0, 2, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = "#b2dfdb"; ctx.beginPath(); ctx.moveTo(-4, -1); ctx.lineTo(-8, -2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-4, 1); ctx.lineTo(-8, 2); ctx.stroke();
+            ctx.fillStyle = "#000"; ctx.fillRect(0, -1, 1, 1);
+            ctx.restore();
+        }
+        function drawLobster(cx, cy, dir) {
+            ctx.save(); ctx.translate(cx, cy); ctx.scale(dir, 1);
+            ctx.fillStyle = "#c0392b"; ctx.fillRect(-3, -2, 5, 2); ctx.fillRect(2, -2, 2, 2); ctx.fillRect(3, -1, 2, 1); ctx.fillRect(-5, -1, 2, 1);
+            ctx.fillStyle = "#000"; ctx.fillRect(3, -2, 1, 1);
+            ctx.restore();
+        }
+
+        function drawTree(tx, ty) {
+            ctx.fillStyle = "#5d4037"; ctx.fillRect(tx - 5, ty - 40, 10, 40);
+            ctx.fillStyle = "#2e7d32";
+            ctx.beginPath(); ctx.arc(tx, ty - 50, 20, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(tx - 15, ty - 40, 15, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(tx + 15, ty - 40, 15, 0, Math.PI * 2); ctx.fill();
+        }
+
+        function drawBuildings(isl) {
+            let drawVendor = (x, y, color) => {
+                ctx.fillStyle = color; ctx.fillRect(x - 8, y - 25, 16, 25);
+                ctx.fillStyle = "#ffccbc"; ctx.fillRect(x - 6, y - 38, 12, 13);
+                ctx.fillStyle = color; ctx.fillRect(x - 8, y - 40, 16, 3);
+            };
+
+            if (isl.shopType === "wood") {
+                ctx.fillStyle = "#5d4037"; ctx.fillRect(isl.shopPos - 50, groundY - 70, 100, 70);
+                drawVendor(isl.shopPos, groundY, "#8e44ad");
+                ctx.fillStyle = "#795548"; ctx.fillRect(isl.shopPos - 45, groundY - 25, 90, 25);
+                ctx.fillStyle = "#4e342e"; ctx.beginPath(); ctx.moveTo(isl.shopPos - 60, groundY - 70); ctx.lineTo(isl.shopPos, groundY - 110); ctx.lineTo(isl.shopPos + 60, groundY - 70); ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.fillRect(isl.shopPos - 20, groundY - 95, 40, 15);
+                ctx.fillStyle = "#000"; ctx.font = "8px 'Press Start 2P'"; ctx.fillText("GEAR", isl.shopPos - 15, groundY - 84);
+                ctx.font = "12px Arial"; ctx.fillText("🎣", isl.shopPos - 35, groundY - 50);
+            } else if (isl.shopType === "stone") {
+                ctx.fillStyle = isl.iglooPos ? "#b2dfdb" : "#546e7a";
+                ctx.fillRect(isl.shopPos - 50, groundY - 80, 100, 80);
+                drawVendor(isl.shopPos, groundY, "#c0392b");
+                ctx.fillStyle = isl.iglooPos ? "#80cbc4" : "#455a64"; ctx.fillRect(isl.shopPos - 45, groundY - 30, 90, 30);
+                ctx.fillStyle = isl.iglooPos ? "#4db6ac" : "#263238"; ctx.fillRect(isl.shopPos - 55, groundY - 90, 110, 15);
+                ctx.fillStyle = "#fff"; ctx.fillRect(isl.shopPos - 20, groundY - 82, 40, 13);
+                ctx.fillStyle = isl.iglooPos ? "#00695c" : "#000"; ctx.font = "8px 'Press Start 2P'"; ctx.fillText("GEAR", isl.shopPos - 18, groundY - 72);
+                ctx.font = "12px Arial"; ctx.fillText("⚓", isl.shopPos - 35, groundY - 50);
+            } else if (isl.shopType === "bamboo") {
+                ctx.fillStyle = "#afb42b"; ctx.fillRect(isl.shopPos - 50, groundY - 70, 100, 70);
+                drawVendor(isl.shopPos, groundY, "#f39c12");
+                ctx.fillStyle = "#9e9d24"; ctx.fillRect(isl.shopPos - 45, groundY - 25, 90, 25);
+                ctx.fillStyle = "#827717"; ctx.fillRect(isl.shopPos - 60, groundY - 85, 120, 20);
+                ctx.fillStyle = "#fff"; ctx.font = "8px 'Press Start 2P'"; ctx.fillText("PRO SHOP", isl.shopPos - 35, groundY - 72);
+                ctx.font = "12px Arial"; ctx.fillText("⛵", isl.shopPos - 35, groundY - 45);
+            }
+            if (isl.baitShopPos) {
+                ctx.fillStyle = "#7cb342"; ctx.fillRect(isl.baitShopPos - 40, groundY - 60, 80, 60);
+                drawVendor(isl.baitShopPos, groundY, "#27ae60");
+                ctx.fillStyle = "#558b2f"; ctx.fillRect(isl.baitShopPos - 35, groundY - 20, 70, 20);
+                ctx.fillStyle = "#33691e"; ctx.beginPath(); ctx.moveTo(isl.baitShopPos - 50, groundY - 60); ctx.lineTo(isl.baitShopPos, groundY - 90); ctx.lineTo(isl.baitShopPos + 50, groundY - 60); ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.font = "7px 'Press Start 2P'"; ctx.fillText("BAITS", isl.baitShopPos - 20, groundY - 45);
+                ctx.font = "12px Arial"; ctx.fillText("🐛", isl.baitShopPos - 20, groundY - 30);
+            }
+            if (isl.marketPos) {
+                ctx.fillStyle = "#8d6e63"; ctx.fillRect(isl.marketPos - 55, groundY - 60, 10, 60);
+                ctx.fillStyle = "#8d6e63"; ctx.fillRect(isl.marketPos + 45, groundY - 60, 10, 60);
+                drawVendor(isl.marketPos, groundY, "#2980b9");
+                ctx.fillStyle = "#795548"; ctx.fillRect(isl.marketPos - 60, groundY - 30, 120, 30);
+                ctx.fillStyle = "#81d4fa"; ctx.fillRect(isl.marketPos - 50, groundY - 25, 30, 15);
+                ctx.fillStyle = "#b2dfdb"; ctx.fillRect(isl.marketPos - 10, groundY - 25, 30, 15);
+                ctx.font = "10px Arial"; ctx.fillStyle = "#000"; ctx.fillText("🐟", isl.marketPos - 40, groundY - 15); ctx.fillText("🦞", isl.marketPos, groundY - 15);
+                for (let i = 0; i < 14; i++) {
+                    ctx.fillStyle = i % 2 === 0 ? "#e74c3c" : "#ecf0f1";
+                    ctx.fillRect(isl.marketPos - 70 + i * 10, groundY - 80, 10, 30);
+                }
+                ctx.fillStyle = "#ffca28"; ctx.fillRect(isl.marketPos - 30, groundY - 100, 60, 16);
+                ctx.fillStyle = "#000"; ctx.font = "7px 'Press Start 2P'"; ctx.fillText("MARKET", isl.marketPos - 22, groundY - 88);
+            }
+            if (isl.upgradePos) {
+                ctx.fillStyle = "#795548"; ctx.fillRect(isl.upgradePos - 40, groundY - 60, 10, 60);
+                drawVendor(isl.upgradePos, groundY, "#d35400");
+                ctx.fillStyle = "#7f8c8d"; ctx.fillRect(isl.upgradePos + 5, groundY - 20, 25, 20);
+                ctx.fillStyle = "#bdc3c7"; ctx.fillRect(isl.upgradePos + 3, groundY - 25, 29, 5);
+                ctx.fillStyle = "#e67e22"; ctx.beginPath(); ctx.moveTo(isl.upgradePos - 50, groundY - 60); ctx.lineTo(isl.upgradePos, groundY - 100); ctx.lineTo(isl.upgradePos + 50, groundY - 60); ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.fillRect(isl.upgradePos - 35, groundY - 52, 60, 14);
+                ctx.fillStyle = "#000"; ctx.font = "7px 'Press Start 2P'"; ctx.fillText("UPGRADE", isl.upgradePos - 30, groundY - 42);
+                ctx.font = "12px Arial"; ctx.fillText("🛠️", isl.upgradePos - 20, groundY - 30);
+            }
+        }
+
+        function drawInteractionPrompts() {
+            let activeIsland = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
+            let py = groundY - 120;
+            if (activeIsland && !inBoat) {
+                if (Math.abs(player.x - activeIsland.shopPos) < 120) drawFloatingText("[ENTER] SHOP", activeIsland.shopPos, py, 110);
+                else if (activeIsland.marketPos && Math.abs(player.x - activeIsland.marketPos) < 120) drawFloatingText("[ENTER] MARKET", activeIsland.marketPos, py, 90);
+                else if (activeIsland.baitShopPos && Math.abs(player.x - activeIsland.baitShopPos) < 120) drawFloatingText("[ENTER] BAITS", activeIsland.baitShopPos, py, 120);
+                else if (activeIsland.iglooPos && Math.abs(player.x - activeIsland.iglooPos) < 120) drawFloatingText("[ENTER] ESKIMO", activeIsland.iglooPos, py - 30, 110);
+                else if (activeIsland.upgradePos && Math.abs(player.x - activeIsland.upgradePos) < 120) drawFloatingText("[ENTER] UPGRADE", activeIsland.upgradePos, py - 40, 130);
+            }
+            if (!inBoat && Math.abs(player.x - travelingMerchant.x) < 150) {
+                drawFloatingText("[ENTER] TRAVELLER", travelingMerchant.x, py - 60, 140);
+            }
+            if (!inBoat && hasBoat && Math.abs(player.x - boatX) < 150) {
+                drawFloatingText("[E] BOARD", boatX, groundY - 110, 120);
+            }
+            if (inBoat && boatsData[boatType].hasTrolling && !player.fishing && !isFighting) {
+                drawFloatingText("[T] TROLLING", player.x, groundY - 150, 110);
+            }
+        }
+
+        function drawFishingRod(px, py, time, waterLevel) {
+            const r = rodsData[currentRodId];
+            ctx.strokeStyle = r.c; ctx.lineWidth = r.thickness; ctx.lineCap = "round";
+            ctx.beginPath();
+            let rodStartX = px + 10 * player.dir;
+            let rodStartY = py - 18;
+            let rodTipX, rodTipY;
+            if (isFighting) {
+                let bendX = px + (40 + Math.sin(time * 20) * 2) * player.dir;
+                let bendY = py - 60;
+                rodTipX = px + (65 + Math.sin(time * 20) * 3) * player.dir;
+                rodTipY = py - 35 + Math.sin(time * 20) * 5;
+                ctx.moveTo(rodStartX, rodStartY);
+                ctx.quadraticCurveTo(bendX, bendY, rodTipX, rodTipY);
+            } else {
+                rodTipX = px + 80 * player.dir; rodTipY = py - 50;
+                ctx.moveTo(rodStartX, rodStartY); ctx.lineTo(rodTipX, rodTipY);
+            }
+            ctx.stroke();
+            let bobberX = isFighting ? rodTipX : rodTipX;
+            let bobberY = waterLevel + (isFighting ? Math.sin(time * 40) * 5 : Math.sin(time * 5) * 2);
+            ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(rodTipX, rodTipY); ctx.lineTo(bobberX, bobberY); ctx.stroke();
+            ctx.fillStyle = "#ff1744"; ctx.beginPath(); ctx.arc(bobberX, bobberY, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(bobberX, bobberY - 3, 3, 0, Math.PI * 2); ctx.fill();
+
+            if (currentBaitId !== "none") {
+                const b = baitsData[currentBaitId];
+                ctx.font = "12px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText(b.v, bobberX, bobberY + 12);
+                ctx.textAlign = "left";
+            }
+        }
+
+        function handlePhysics(waterLevel) {
+            if (!player.fishing && !isFighting) {
+                let speed = inBoat ? boatsData[boatType].speed : 8;
+                if (isTrolling) speed = 6;
+                if (keys['KeyD']) { player.dx = speed; player.dir = 1; }
+                else if (keys['KeyA']) { player.dx = -speed; player.dir = -1; }
+                else player.dx *= 0.8;
+            } else { player.dx *= 0.5; }
+
+            player.x += player.dx;
+            let activeIsland = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
+            let onLand = activeIsland !== undefined;
+
+            if (inBoat) {
+                let bData = boatsData[boatType];
+                // Oprava: Hráč stojí na dně kokpitu, hluboko uvnitř lodě
+                player.y = waterLevel + bData.cockpitDepth + Math.sin(Date.now() / 250) * 4;
+                ox = Math.min(100, ox + 1);
+            } else {
+                if (!onLand) {
+                    player.dy += 0.5; player.y += player.dy;
+                    if (player.y > waterLevel + 30) {
+                        player.y = waterLevel + 30; player.dy = 0;
+                        ox -= 0.4; if (ox <= 0) hp -= 1;
+                    } else if (player.y > waterLevel) { player.dy *= 0.7; }
+                } else {
+                    player.y = groundY; player.dy = 0;
+                    ox = Math.min(100, ox + 2);
+                }
+            }
+            if (hp <= 0) { hp = 100; ox = 100; player.x = 1200; inBoat = false; boatX = 1000; money = Math.floor(money * 0.8); inventory = []; isTrolling = false; fightInProgress = false; isFighting = false; updateHUD(); showMsg("YOU DROWNED! (-20% money)"); }
+            
+            travelingMerchant.x += travelingMerchant.dx;
+            if (travelingMerchant.x > 13000) travelingMerchant.dx = -Math.abs(travelingMerchant.dx);
+            if (travelingMerchant.x < -12000) travelingMerchant.dx = Math.abs(travelingMerchant.dx);
+        }
+
+        // Funkce pro vykreslení grafických detailů lodě (Background - věci za hráčem)
+        function drawBoatBackground(bx, by, bData, time, dir) {
+            ctx.save(); ctx.translate(bx, by); ctx.scale(dir, 1);
+            if (boatType === 'motorovka') {
+                // Inflatable boat inside floor
+                ctx.fillStyle = "#37474f"; ctx.fillRect(-40, 10, 80, 8); // Floor
+                // Engine at the back
+                ctx.fillStyle = "#212121"; ctx.fillRect(-50, -5, 10, 20); // Engine body
+                ctx.fillStyle = "#e53935"; ctx.fillRect(-52, -10, 14, 8); // Engine head
+                // Seat for player
+                ctx.fillStyle = "#bdbdbd"; ctx.fillRect(0, 5, 20, 8); // Seat (shifted to +10 center)
+            } else if (boatType === 'jachta') {
+                // Dno kokpitu (bílé)
+                ctx.fillStyle = "#fff"; ctx.fillRect(-40, 0, 80, 20);
+                // Kajuta 
+                ctx.fillStyle = "#e0f2f1";
+                ctx.beginPath();
+                ctx.moveTo(-15, 10); ctx.lineTo(35, 10);
+                ctx.lineTo(30, -15); ctx.lineTo(-10, -15);
+                ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = "#b2dfdb"; ctx.lineWidth = 1; ctx.stroke();
+                // Okna kajuty
+                ctx.fillStyle = "#81d4fa"; ctx.fillRect(0, -10, 8, 8); ctx.fillRect(12, -10, 8, 8);
+                // Radar na střeše
+                ctx.fillStyle = "#9e9e9e"; ctx.fillRect(5, -18, 15, 3);
+                ctx.fillStyle = "#424242"; ctx.fillRect(10, -22, 5, 4);
+            }
+            ctx.restore();
+        }
+
+        // Funkce pro vykreslení grafických detailů lodě (Foreground - trup před hráčem)
+        function drawBoatForeground(bx, by, bData, time, dir) {
+            ctx.save(); ctx.translate(bx, by); ctx.scale(dir, 1);
+            if (boatType === 'motorovka') {
+                // Inflatable tubes
+                ctx.fillStyle = "#2e7d32";
+                ctx.beginPath(); ctx.roundRect(-45, 12, 90, 10, 5); ctx.fill();
+                ctx.fillStyle = "#43a047";
+                ctx.beginPath(); ctx.roundRect(-42, 5, 84, 10, 5); ctx.fill();
+                ctx.strokeStyle = "#1b5e20"; ctx.lineWidth = 1; ctx.stroke();
+
+                ctx.fillStyle = "#000"; ctx.fillRect(35, 6, 4, 4); // Rope tie
+                ctx.fillStyle = "#9e9e9e"; ctx.fillRect(-49, 15, 4, 8); // Engine shaft
+            } else if (boatType === 'jachta') {
+                // Trupu se stínováním a odrazy
+                let hullGrade = ctx.createLinearGradient(0, 5, 0, 25);
+                hullGrade.addColorStop(0, "#eceff1"); hullGrade.addColorStop(1, "#cfd8dc");
+                ctx.fillStyle = hullGrade;
+                ctx.beginPath();
+                ctx.moveTo(-55, 5); ctx.lineTo(55, 5);
+                ctx.lineTo(35, 25); ctx.lineTo(-35, 25);
+                ctx.fill();
+                ctx.strokeStyle = "#90a4ae"; ctx.lineWidth = 2; ctx.stroke();
+                // Odrazy vody na trupu
+                ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(-50, 8, 100, 2); ctx.fillRect(-40, 15, 80, 2);
+            }
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let camX = player.x - canvas.width / 2;
+            let time = Date.now() / 1000;
+
+            let sky = ctx.createLinearGradient(0, 0, 0, groundY);
+            sky.addColorStop(0, "#4fc3f7"); sky.addColorStop(1, "#e1f5fe");
+            ctx.fillStyle = sky; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = "#ffee58"; ctx.beginPath(); ctx.arc(canvas.width - 150, 100, 40, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = "rgba(255,255,255,0.8)";
+            clouds.forEach(c => {
+                let cx = ((c.x - camX * c.s) % (12000)) - 2000;
+                ctx.beginPath(); ctx.arc(cx, c.y, 30, 0, Math.PI * 2); ctx.arc(cx + 25, c.y - 10, 35, 0, Math.PI * 2); ctx.arc(cx + 50, c.y, 25, 0, Math.PI * 2); ctx.fill();
+            });
+
+            ctx.save(); ctx.translate(-camX, 0);
+
+            // Kreslení ostrovů (Vylepšená grafika ledu)
+            islands.forEach(isl => {
+                ctx.fillStyle = "rgba(0,10,30,0.15)"; ctx.fillRect(isl.x - 50, groundY, isl.w + 100, 600);
+
+                ctx.fillStyle = isl.colorBot;
+                ctx.beginPath(); ctx.moveTo(isl.x, groundY + 250); ctx.lineTo(isl.x + isl.w * 0.05, groundY + 20);
+                ctx.lineTo(isl.x + isl.w * 0.95, groundY + 20); ctx.lineTo(isl.x + isl.w, groundY + 250); ctx.fill();
+
+                ctx.fillStyle = isl.colorTop;
+                ctx.beginPath();
+                ctx.moveTo(isl.x + isl.w * 0.04, groundY + 35);
+                ctx.lineTo(isl.x + isl.w * 0.05, groundY);
+                ctx.lineTo(isl.x + isl.w * 0.95, groundY);
+                ctx.lineTo(isl.x + isl.w * 0.96, groundY + 35);
+                for (let j = 40; j >= 0; j--) {
+                    let px = isl.x + isl.w * 0.04 + (isl.w * 0.92) * (j / 40);
+                    let drop = 25 + Math.sin(isl.x + j * 0.5) * 8 + Math.cos(j * 0.2) * 5;
+                    ctx.lineTo(px, groundY + drop);
+                }
+                ctx.fill();
+
+                ctx.fillStyle = "rgba(0,0,0,0.1)";
+                for (let j = 0; j < 45; j++) {
+                    let pX = isl.x + isl.w * 0.05 + (j * 87) % (isl.w * 0.9);
+                    let pY = groundY + 50 + (j * 23) % 180;
+                    let w = 12 + (j * 19) % 30;
+                    let h = 4 + (j * 7) % 15;
+                    ctx.fillRect(pX, pY, w, h);
+                }
+
+                // Ledové detaily pro království
+                if (isl.iglooPos) {
+                    ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fillRect(isl.x + 200, groundY + 50, 100, 100); ctx.fillRect(isl.x + 500, groundY + 100, 150, 50);
+                    ctx.fillStyle = "rgba(0,0,0,0.05)"; ctx.fillRect(isl.x + 250, groundY + 20, 2, 200); ctx.fillRect(isl.x + isl.w - 300, groundY + 20, 2, 200);
+                }
+
+                if (isl.treeOffsets && isl.treeOffsets.length > 0) { isl.treeOffsets.forEach(offset => drawTree(isl.x + offset, groundY)); }
+
+                drawBuildings(isl);
+
+                if (isl.iglooPos) {
+                    let ix = isl.iglooPos;
+                    ctx.fillStyle = "#ffffff"; ctx.strokeStyle = "#80deea"; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(ix, groundY, 70, Math.PI, 0); ctx.fill(); ctx.stroke();
+                    ctx.fillStyle = "#006064"; ctx.beginPath(); ctx.roundRect(ix + 50, groundY - 40, 30, 40, [10, 10, 0, 0]); ctx.fill();
+                    ctx.fillStyle = "#5d4037"; ctx.fillRect(ix - 30, groundY - 50, 25, 50);
+                    ctx.fillStyle = "#a1887f"; ctx.fillRect(ix - 35, groundY - 55, 35, 15);
+                    ctx.fillStyle = "#ffccbc"; ctx.fillRect(ix - 27, groundY - 45, 19, 15);
+                    ctx.fillStyle = "#000"; ctx.fillRect(ix - 23, groundY - 40, 3, 3); ctx.fillRect(ix - 13, groundY - 40, 3, 3);
+
+                    if (currentQuestIdx < eskimoQuests.length) {
+                        let q = eskimoQuests[currentQuestIdx];
+                        let fName = fishTable.find(f => f.id === q.targetId).n;
+                        let fishInInv = inventory.filter(f => f.id === q.targetId);
+                        let text = `Bring me ${q.count}x ${fName}. I have ${fishInInv.length}.`;
+                        drawBubble(text, ix, groundY - 70);
+                    } else { drawBubble("Thanks for the help!", ix, groundY - 70); }
+                }
+
+                if (isl.hasLighthouse) {
+                    let lx = isl.x + isl.w - 300;
+                    ctx.fillStyle = "#eceff1"; ctx.beginPath(); ctx.moveTo(lx - 25, groundY); ctx.lineTo(lx - 15, groundY - 200); ctx.lineTo(lx + 15, groundY - 200); ctx.lineTo(lx + 25, groundY); ctx.fill();
+                    ctx.fillStyle = "#d32f2f"; ctx.fillRect(lx - 17, groundY - 150, 34, 30); ctx.fillRect(lx - 15, groundY - 220, 30, 20);
+                    let beamAngle = time * 1.5;
+                    let beamLen = 2000;
+                    ctx.save();
+                    ctx.globalCompositeOperation = "screen";
+                    
+                    if (ctx.createConicGradient) {
+                        let conicGrad = ctx.createConicGradient(beamAngle, lx, groundY - 210);
+                        conicGrad.addColorStop(0, "rgba(255, 255, 150, 0.6)");
+                        conicGrad.addColorStop(0.04, "rgba(255, 255, 150, 0)");
+                        conicGrad.addColorStop(0.46, "rgba(255, 255, 150, 0)");
+                        conicGrad.addColorStop(0.5, "rgba(255, 255, 150, 0.6)");
+                        conicGrad.addColorStop(0.54, "rgba(255, 255, 150, 0)");
+                        conicGrad.addColorStop(0.96, "rgba(255, 255, 150, 0)");
+                        conicGrad.addColorStop(1, "rgba(255, 255, 150, 0.6)");
+                        
+                        ctx.fillStyle = conicGrad;
+                        ctx.beginPath();
+                        ctx.arc(lx, groundY - 210, beamLen, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        // Fallback implementation if createConicGradient is unsupported
+                        let beamGrad = ctx.createRadialGradient(lx, groundY - 210, 0, lx, groundY - 210, beamLen);
+                        beamGrad.addColorStop(0, "rgba(255,255,150,0.5)");
+                        beamGrad.addColorStop(1, "rgba(255,255,150,0)");
+                        ctx.fillStyle = beamGrad;
+                        let halfSpread = 0.12;
+                        ctx.beginPath();
+                        ctx.moveTo(lx, groundY - 210);
+                        ctx.arc(lx, groundY - 210, beamLen, beamAngle - halfSpread, beamAngle + halfSpread);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.beginPath();
+                        ctx.moveTo(lx, groundY - 210);
+                        ctx.arc(lx, groundY - 210, beamLen, beamAngle + Math.PI - halfSpread, beamAngle + Math.PI + halfSpread);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+            });
+
+            // === PIRATE MERCHANT SHIP ===
+            let mx = travelingMerchant.x;
+            let mDir = travelingMerchant.dx > 0 ? 1 : -1;
+            ctx.save(); ctx.translate(mx, groundY + 20); ctx.scale(mDir, 1);
+            // Hull underwater part
+            ctx.fillStyle = "#2e1a0e";
+            ctx.beginPath(); ctx.moveTo(-90,0); ctx.lineTo(-75,18); ctx.lineTo(75,18); ctx.lineTo(90,0); ctx.closePath(); ctx.fill();
+            // Hull above water
+            ctx.fillStyle = "#5d3a1a"; ctx.fillRect(-90,-20,180,22);
+            // Plank lines
+            ctx.strokeStyle = "#3e220d"; ctx.lineWidth = 1.5;
+            for (let xi=-70; xi<90; xi+=22){ ctx.beginPath(); ctx.moveTo(xi,-20); ctx.lineTo(xi,2); ctx.stroke(); }
+            // Deck
+            ctx.fillStyle = "#8d5524"; ctx.fillRect(-85,-28,170,10);
+            // Deck posts
+            ctx.fillStyle = "#4a2d0a";
+            for (let xi=-75; xi<=75; xi+=15){ ctx.fillRect(xi,-35,3,9); }
+            // Stern cabin
+            ctx.fillStyle = "#3e2205"; ctx.fillRect(40,-65,48,39);
+            ctx.fillStyle = "#5d3a1a"; ctx.fillRect(43,-62,42,34);
+            ctx.fillStyle = "#f39c12"; ctx.fillRect(43,-64,42,3); ctx.fillRect(43,-30,42,3);
+            // Cabin windows
+            ctx.fillStyle = "#81d4fa";
+            ctx.fillRect(47,-56,9,8); ctx.fillRect(61,-56,9,8); ctx.fillRect(74,-56,9,8);
+            ctx.strokeStyle = "#4a2d0a"; ctx.lineWidth=1;
+            ctx.strokeRect(47,-56,9,8); ctx.strokeRect(61,-56,9,8); ctx.strokeRect(74,-56,9,8);
+            // Bowsprit
+            ctx.strokeStyle = "#3e2205"; ctx.lineWidth=5;
+            ctx.beginPath(); ctx.moveTo(-88,-22); ctx.lineTo(-128,-50); ctx.stroke();
+            ctx.fillStyle="rgba(240,225,180,0.9)";
+            ctx.beginPath(); ctx.moveTo(-90,-22); ctx.lineTo(-123,-47); ctx.lineTo(-113,-30); ctx.lineTo(-88,-20); ctx.closePath(); ctx.fill();
+            // Main mast
+            ctx.fillStyle="#2e1505"; ctx.fillRect(-8,-170,8,145);
+            // Crow's nest
+            ctx.fillStyle="#3e2205"; ctx.fillRect(-15,-155,22,10); ctx.fillRect(-12,-160,16,6);
+            // Front mast
+            ctx.fillStyle="#2e1505"; ctx.fillRect(-55,-135,7,110);
+            // Main top yardarm
+            ctx.strokeStyle="#2e1505"; ctx.lineWidth=4;
+            ctx.beginPath(); ctx.moveTo(-8,-155); ctx.lineTo(60,-148); ctx.stroke();
+            // Main top sail
+            ctx.fillStyle="rgba(245,240,210,0.93)";
+            ctx.beginPath(); ctx.moveTo(-4,-150); ctx.lineTo(57,-144); ctx.lineTo(57,-95); ctx.lineTo(-4,-95); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle="#c8b89a"; ctx.lineWidth=1; ctx.stroke();
+            ctx.strokeStyle="#c0a87a"; ctx.lineWidth=0.8;
+            ctx.beginPath(); ctx.moveTo(-4,-130); ctx.lineTo(57,-126); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-4,-112); ctx.lineTo(57,-109); ctx.stroke();
+            // Main lower yardarm
+            ctx.strokeStyle="#2e1505"; ctx.lineWidth=4;
+            ctx.beginPath(); ctx.moveTo(-8,-95); ctx.lineTo(55,-88); ctx.stroke();
+            ctx.fillStyle="rgba(240,230,200,0.9)";
+            ctx.beginPath(); ctx.moveTo(-4,-90); ctx.lineTo(52,-84); ctx.lineTo(52,-35); ctx.lineTo(-4,-35); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle="#c8b89a"; ctx.lineWidth=1; ctx.stroke();
+            ctx.strokeStyle="#c0a87a"; ctx.lineWidth=0.8;
+            ctx.beginPath(); ctx.moveTo(-4,-70); ctx.lineTo(52,-65); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-4,-52); ctx.lineTo(52,-48); ctx.stroke();
+            // Front sail
+            ctx.strokeStyle="#2e1505"; ctx.lineWidth=3;
+            ctx.beginPath(); ctx.moveTo(-55,-120); ctx.lineTo(-5,-115); ctx.stroke();
+            ctx.fillStyle="rgba(240,230,200,0.88)";
+            ctx.beginPath(); ctx.moveTo(-52,-116); ctx.lineTo(-8,-112); ctx.lineTo(-8,-65); ctx.lineTo(-52,-65); ctx.closePath(); ctx.fill();
+            ctx.strokeStyle="#c8b89a"; ctx.lineWidth=1; ctx.stroke();
+            // Jolly Roger flag
+            ctx.fillStyle="#111";
+            ctx.beginPath(); ctx.moveTo(-1,-170); ctx.lineTo(30,-165); ctx.lineTo(30,-150); ctx.lineTo(-1,-155); ctx.closePath(); ctx.fill();
+            ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(16,-160,6,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle="#111";
+            ctx.beginPath(); ctx.arc(13,-161,1.5,0,Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(19,-161,1.5,0,Math.PI*2); ctx.fill();
+            ctx.strokeStyle="#fff"; ctx.lineWidth=2.5;
+            ctx.beginPath(); ctx.moveTo(8,-153); ctx.lineTo(24,-147); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(24,-153); ctx.lineTo(8,-147); ctx.stroke();
+            // Cannons
+            ctx.fillStyle="#1a1a1a";
+            ctx.fillRect(-65,-13,18,7); ctx.fillRect(-30,-13,18,7); ctx.fillRect(5,-13,18,7);
+            ctx.fillStyle="#333";
+            ctx.fillRect(-62,-15,12,5); ctx.fillRect(-27,-15,12,5); ctx.fillRect(8,-15,12,5);
+            // Rigging
+            ctx.strokeStyle="rgba(100,70,40,0.7)"; ctx.lineWidth=1;
+            ctx.beginPath(); ctx.moveTo(-1,-168); ctx.lineTo(-52,-130); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-1,-168); ctx.lineTo(57,-148); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(-52,-130); ctx.lineTo(57,-90); ctx.stroke();
+            // Ship name
+            ctx.fillStyle="#f39c12"; ctx.font="bold 6px 'Press Start 2P'";
+            ctx.fillText("MERCHANT", -34,-6);
+            ctx.restore();
+            // === END PIRATE SHIP ===
+
+            drawInteractionPrompts();
+
+            let waterLevel = groundY + 20;
+
+            // Kreslení lodí (Background sekce a stín)
+            if (hasBoat) {
+                let bx = inBoat ? player.x : boatX;
+                let bData = boatsData[boatType];
+                let by = inBoat ? player.y - bData.cockpitDepth : waterLevel - 5; // Dno lodě
+
+                // Stín se nyní drží trupu lodi místo aby létal pod ním
+                ctx.fillStyle = "rgba(0,0,0,0.3)";
+                ctx.beginPath(); ctx.ellipse(bx, by + 25, 60, 10, 0, 0, Math.PI * 2); ctx.fill();
+            }
+
+            let water = ctx.createLinearGradient(0, waterLevel, 0, canvas.height);
+            water.addColorStop(0, "rgba(2, 119, 189, 0.8)"); water.addColorStop(1, "rgba(1, 87, 155, 0.95)");
+            ctx.fillStyle = water; ctx.fillRect(camX, waterLevel, canvas.width, 1000);
+
+            ctx.fillStyle = "rgba(255,255,255,0.2)";
+            for (let i = 0; i < 20; i++) {
+                let wx = ((camX * (0.7 + i * 0.01) + i * 150 + Math.sin(time + i) * 50) % (canvas.width + camX)) - 100;
+                ctx.fillRect(wx, waterLevel + 10 + i * 12, 80 - i * 2, 3);
+            }
+
+            // Mořské dno a zvířata
+            let sfStartX = Math.floor(camX / 50) * 50 - 50;
+            let sfEndX = camX + canvas.width + 100;
+
+            for (let x = sfStartX; x < sfEndX; x += 50) {
+                let fillCol = "#154360";
+                if (x < -7500) fillCol = "#a9cce3";
+                else if (x < 0) fillCol = "#5f6a6a";
+                else if (x < 4000) fillCol = "#d4ac0d";
+                else if (x < 8500) fillCol = "#f9e79f";
+                else fillCol = "#154360";
+
+                let fade1 = 0, fade2 = 0;
+                if (x > 8500) fade1 = Math.min(1, (x - 8500) / 1000);
+                else if (x < -9500) fade1 = Math.min(1, (-9500 - x) / 1000);
+
+                let x2 = x + 50;
+                if (x2 > 8500) fade2 = Math.min(1, (x2 - 8500) / 1000);
+                else if (x2 < -9500) fade2 = Math.min(1, (-9500 - x2) / 1000);
+
+                let drop1 = Math.sin(x * 0.005) * 15 + Math.cos(x * 0.012) * 8;
+                let drop2 = Math.sin(x2 * 0.005) * 15 + Math.cos(x2 * 0.012) * 8;
+
+                let sfDepth1 = groundY + 140 + drop1 + fade1 * 500;
+                let sfDepth2 = groundY + 140 + drop2 + fade2 * 500;
+
+                ctx.fillStyle = fillCol;
+                ctx.beginPath();
+                ctx.moveTo(x - 1, canvas.height + 500);
+                ctx.lineTo(x - 1, sfDepth1);
+                ctx.lineTo(x2 + 1, sfDepth2);
+                ctx.lineTo(x2 + 1, canvas.height + 500);
+                ctx.fill();
+
+                ctx.strokeStyle = "rgba(0,0,0,0.15)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x - 1, sfDepth1);
+                ctx.lineTo(x2 + 1, sfDepth2);
+                ctx.stroke();
+
+                if (fade1 < 0.4) {
+                    let r = Math.abs(Math.sin(x * 1234 + 5678));
+                    if (x < -7000) {
+                        if (r < 0.5) drawRock(x + 10, sfDepth1, 5 + r * 5);
+                        else if (r > 0.8) drawRock(x + 20, sfDepth1, 6 + r * 4);
+                    } else if (x > -5000 && x < 0) {
+                        if (r > 0.3) drawKelp(x + 10, sfDepth1, 10, time + x);
+                        if (r > 0.6) drawKelp(x + 25, sfDepth1, 15, time + x * 2);
+                        if (r < 0.1) {
+                            let moveX = Math.sin(time * 2 + x) * 5;
+                            let dir = Math.cos(time * 2 + x) > 0 ? 1 : -1;
+                            drawShrimp(x + moveX + 10, sfDepth1 - 5, dir);
+                        } else if (r > 0.1 && r < 0.2) drawOctopus(x + 15, sfDepth1);
+                    } else if (x > 5000 && x < 9000) {
+                        if (r < 0.3) drawCoral(x + 5, sfDepth1);
+                        else if (r >= 0.3 && r < 0.5) drawCoral(x + 20, sfDepth1);
+                        else if (r > 0.8) {
+                            let moveX = Math.sin(time * 1.5 + x) * 10;
+                            let dir = Math.cos(time * 1.5 + x) > 0 ? 1 : -1;
+                            drawPufferfish(x + moveX + 10, sfDepth1 - 20 - r * 10, dir);
+                        } else if (r > 0.6 && r <= 0.8) {
+                            let moveX = Math.sin(time * 1.5 + x) * 10;
+                            let dir = Math.cos(time * 1.5 + x) > 0 ? 1 : -1;
+                            drawFish(x + moveX + 10, sfDepth1 - 25 - r * 15, dir, "#f1c40f");
+                        } else if (r > 0.5 && r <= 0.6) {
+                            let moveX = Math.sin(time) * 5;
+                            let dir = Math.cos(time) > 0 ? 1 : -1;
+                            drawTurtle(x + moveX + 10, sfDepth1 - 15 - r * 5, dir);
+                        }
+                    } else {
+                        if (r < 0.15) {
+                            let moveX = Math.sin(time * 2 + x) * 5;
+                            drawCrab(x + moveX + 10, sfDepth1 - 1);
+                        } else if (r > 0.85) {
+                            let moveX = Math.sin(time * 1.5 + x) * 10;
+                            let dir = Math.cos(time * 1.5 + x) > 0 ? 1 : -1;
+                            drawFish(x + moveX + 10, sfDepth1 - 20 - r * 10, dir, "#3498db");
+                        } else if (r > 0.70 && r <= 0.85) drawKelp(x + 15, sfDepth1, 5, time + x);
+                        else if (r > 0.55 && r <= 0.70) drawStarfish(x + 20, sfDepth1 - 2);
+                        else if (r > 0.3 && r < 0.4) drawShell(x + 10, sfDepth1 - 1);
+                        else if (r >= 0.4 && r < 0.45) {
+                            let moveX = Math.sin(time) * 5;
+                            let dir = Math.cos(time) > 0 ? 1 : -1;
+                            drawSquid(x + moveX + 10, sfDepth1 - 15 - r * 5, dir);
+                        } else if (r >= 0.45 && r < 0.55) {
+                            let moveX = Math.sin(time * 1.5 + x) * 5;
+                            let dir = Math.cos(time * 1.5 + x) > 0 ? 1 : -1;
+                            drawLobster(x + moveX + 15, sfDepth1 - 2, dir);
+                        }
+                    }
+                }
+            }
+
+            // Loď Background (nyní přes vodou, takže nezatopená)
+            if (hasBoat) {
+                let bx = inBoat ? player.x : boatX;
+                let bData = boatsData[boatType];
+                let by = inBoat ? player.y - bData.cockpitDepth : waterLevel - 5;
+                let bDir = inBoat ? player.dir : 1;
+                drawBoatBackground(bx, by, bData, time, bDir);
+            }
+
+            // Kreslení kamaráda (Nyní hluboko uvnitř lodě)
+            let px = player.x;
+            let py = player.y; // Žádné zvedání, je hluboko v kokpitu
+            // Posunutí v kokpitu pro lepší pocit sedění
+            if (inBoat) px += (boatType === 'motorovka' ? 10 : 0) * player.dir;
+
+            // Vykreslení kamaráda
+            ctx.fillStyle = "#212121"; ctx.fillRect(px - 10, py - 25, 20, 25);
+            ctx.fillStyle = "#ffccbc"; ctx.fillRect(px - 8, py - 38, 16, 13);
+            ctx.fillStyle = "#d32f2f"; ctx.fillRect(px - 10, py - 43, 20, 5);
+            ctx.fillRect(px + (player.dir === 1 ? 5 : -15), py - 41, 10, 3);
+
+            if (player.fishing) {
+                drawFishingRod(px, py, time, waterLevel);
+            } else {
+                ctx.save();
+                ctx.translate(px, py - 18);
+                const r = rodsData[currentRodId];
+                ctx.strokeStyle = r.c; ctx.lineWidth = r.thickness; ctx.lineCap = "round";
+                ctx.beginPath();
+                let rodTipX = -45 * player.dir;
+                let rodTipY = -60 + Math.sin(time * 3) * 3; // Lehký pohyb prutu
+                ctx.moveTo(10 * player.dir, 10);
+                ctx.lineTo(rodTipX, rodTipY);
+                ctx.stroke();
+
+                let bobberX = rodTipX;
+                let bobberY = rodTipY + 20;
+                ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(rodTipX, rodTipY); ctx.lineTo(bobberX, bobberY); ctx.stroke();
+
+                ctx.fillStyle = "#ff1744"; ctx.beginPath(); ctx.arc(bobberX, bobberY, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(bobberX, bobberY - 3, 3, 0, Math.PI * 2); ctx.fill();
+
+                if (currentBaitId !== "none") {
+                    const b = baitsData[currentBaitId];
+                    ctx.font = "12px Arial";
+                    ctx.textAlign = "center";
+                    ctx.fillText(b.v, bobberX, bobberY + 12);
+                }
+                ctx.restore();
+            }
+
+            // Kreslení lodí (Foreground sekce - Trupu zakryje spodní část hráče)
+            if (hasBoat) {
+                let bx = inBoat ? player.x : boatX;
+                let bData = boatsData[boatType];
+                let by = inBoat ? player.y - bData.cockpitDepth : waterLevel - 5;
+                let bDir = inBoat ? player.dir : 1;
+
+                // Loď Foreground (Trup a paluba PŘED hráčem)
+                drawBoatForeground(bx, by, bData, time, bDir);
+
+                // Efekty pohybu
+                if (inBoat && Math.abs(player.dx) > 2) {
+                    ctx.fillStyle = "rgba(255,255,255,0.6)";
+                    for (let i = 0; i < 3; i++) ctx.beginPath(), ctx.arc(bx - (50 + i * 20) * player.dir, waterLevel + 15 + i * 2, 8 + Math.random() * 5, 0, Math.PI * 2), ctx.fill();
+                }
+                // Trolling linka a prut
+                if (inBoat && boatsData[boatType].hasTrolling && isTrolling) {
+                    const trR = rodsData[currentRodId];
+                    ctx.strokeStyle = trR.c; ctx.lineWidth = trR.thickness; ctx.lineCap = "round";
+                    ctx.beginPath();
+
+                    let trRodStartX = bx - 40 * player.dir;
+                    let trRodStartY = by + 5;
+                    let trRodTipX = bx - 70 * player.dir;
+                    let trRodTipY = by - 10;
+
+                    if (boatType === 'ponorka') {
+                        trRodStartX = bx - 55 * player.dir;
+                        trRodTipX = bx - 85 * player.dir;
+                    }
+
+                    ctx.moveTo(trRodStartX, trRodStartY);
+                    ctx.lineTo(trRodTipX, trRodTipY);
+                    ctx.stroke();
+
+                    ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(trRodTipX, trRodTipY);
+                    let bobberX = bx - 200 * player.dir;
+                    let bobberY = waterLevel + 60 + Math.sin(time * 5) * 5;
+                    ctx.lineTo(bobberX, bobberY);
+                    ctx.stroke();
+
+                    ctx.fillStyle = "#ff1744";
+                    ctx.beginPath(); ctx.arc(bobberX, bobberY, 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = "#fff";
+                    ctx.beginPath(); ctx.arc(bobberX, bobberY - 3, 3, 0, Math.PI * 2); ctx.fill();
+
+                    if (currentBaitId !== "none") {
+                        const b = baitsData[currentBaitId];
+                        ctx.font = "12px Arial";
+                        ctx.textAlign = "center";
+                        ctx.fillText(b.v, bobberX, bobberY + 12);
+                        ctx.textAlign = "left";
+                    }
+                }
+            }
+
+            ctx.restore();
+
+            handlePhysics(waterLevel);
+            if (isTrolling) handleTrolling();
+
+            updateHUD();
+            requestAnimationFrame(draw);
+        }
+
+        function saveGame() {
+                const data = {
+                    money, hp, ox, hasBoat, boatX, boatType, inBoat, isTrolling,
+                    inventory, caughtFishIds: Array.from(caughtFishIds),
+                    rodPowerUpgrades, currentQuestIdx,
+                    currentRodId, ownedRodIds,
+                    currentBaitId, ownedBaitIds,
+                    x: player.x, dx: player.dx, dy: player.dy, dir: player.dir,
+                    merchantX: travelingMerchant.x, merchantDx: travelingMerchant.dx
+                };
+                localStorage.setItem("fisherman_base_save", JSON.stringify(data));
+            }
+
+            function loadGame() {
+            const saved = localStorage.getItem("fisherman_base_save");
+            if (saved) {
+                try {
+                    const d = JSON.parse(saved);
+                    if (d.money !== undefined) money = d.money;
+                    if (d.hp !== undefined) hp = d.hp;
+                    if (d.ox !== undefined) ox = d.ox;
+                    if (d.hasBoat !== undefined) hasBoat = d.hasBoat;
+                    if (d.inBoat !== undefined) inBoat = d.inBoat;
+                    if (d.boatX !== undefined) boatX = d.boatX;
+                    if (d.boatType !== undefined) boatType = d.boatType;
+                    if (d.isTrolling !== undefined) isTrolling = d.isTrolling;
+                    if (d.inventory !== undefined) inventory = d.inventory;
+                    if (d.caughtFishIds !== undefined) caughtFishIds = new Set(d.caughtFishIds);
+                    if (d.rodPowerUpgrades !== undefined) rodPowerUpgrades = d.rodPowerUpgrades;
+                    if (d.currentQuestIdx !== undefined) currentQuestIdx = d.currentQuestIdx;
+                    if (d.currentRodId !== undefined) currentRodId = d.currentRodId;
+                    if (d.ownedRodIds !== undefined) ownedRodIds = d.ownedRodIds;
+                    if (d.currentBaitId !== undefined) currentBaitId = d.currentBaitId;
+                    if (d.ownedBaitIds !== undefined) ownedBaitIds = d.ownedBaitIds;
+                    if (d.x !== undefined) player.x = d.x;
+                    if (d.dx !== undefined) player.dx = d.dx;
+                    if (d.dy !== undefined) player.dy = d.dy;
+                    if (d.dir !== undefined) player.dir = d.dir;
+                    if (d.merchantX !== undefined) travelingMerchant.x = d.merchantX;
+                    if (d.merchantDx !== undefined) travelingMerchant.dx = d.merchantDx;
+                } catch(e) { console.error("Save corrupted", e); }
+            }
+        }
+
+        loadGame();
+        setInterval(saveGame, 5000);
+
+        updateHUD(); draw();
+    </script>
+</body>
+
+</html>
