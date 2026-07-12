@@ -486,6 +486,7 @@
             <div class="nav-display">
                 LOCATION: <span id="loc-name" style="color:#81d4fa">---</span><br>
                 POSITION: <span id="loc-pos">0</span>m <span id="luck-display" style="color:#80cbc4"></span><br>
+                TIME: <span id="time-display" style="color:#ffd700">12:00</span> <span id="moon-display" style="font-size:12px;">🌕</span><br>
                 <span id="guide" style="color:var(--gold); margin-top: 4px; display: block;"></span>
                 <span id="merchant-guide" style="color:#ffcc00; margin-top: 4px; display: block;"></span>
             </div>
@@ -638,6 +639,14 @@
         let mooredBoatOffset = 0;
         let inventory = [];
 
+        // --- TIME OF DAY SYSTEM ---
+        let gameTime = 12; // 0 to 24 hours
+        let gameDays = 0;
+        let isNight = false;
+        let moonPhase = 4; // 0 to 7 (4 is Full Moon)
+        const MOON_PHASES = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+        let lastPhaseUpdate = -1;
+
         // THREE.JS SETUP
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87ceeb); // Sky blue
@@ -715,6 +724,48 @@
         const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
         dirLight.position.set(100, 200, 50);
         scene.add(dirLight);
+
+        // --- SUN & MOON VISUALS ---
+        const celestialGroup = new THREE.Group();
+        scene.add(celestialGroup);
+        
+        const sunGeo = new THREE.SphereGeometry(150, 32, 32);
+        const sunMat = new THREE.MeshBasicMaterial({ color: 0xffffaa });
+        const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+        sunMesh.position.set(0, 4000, 0);
+        celestialGroup.add(sunMesh);
+
+        const moonCanvas = document.createElement('canvas');
+        moonCanvas.width = 256; moonCanvas.height = 256;
+        const moonCtx = moonCanvas.getContext('2d');
+        const moonTex = new THREE.CanvasTexture(moonCanvas);
+        
+        const moonGeo = new THREE.SphereGeometry(120, 32, 32);
+        const moonMat = new THREE.MeshBasicMaterial({ map: moonTex, transparent: true });
+        const moonMesh = new THREE.Mesh(moonGeo, moonMat);
+        moonMesh.position.set(0, -4000, 0);
+        celestialGroup.add(moonMesh);
+
+        function updateMoonTexture(phaseIndex) {
+            moonCtx.clearRect(0, 0, 256, 256);
+            moonCtx.fillStyle = 'white';
+            moonCtx.beginPath();
+            moonCtx.arc(128, 128, 120, 0, Math.PI * 2);
+            moonCtx.fill();
+            moonCtx.globalCompositeOperation = "source-atop";
+            moonCtx.fillStyle = "rgba(0,0,0,0.85)";
+            
+            if (phaseIndex === 0) moonCtx.fillRect(0,0,256,256);
+            else if (phaseIndex === 1) moonCtx.fillRect(0,0,192,256);
+            else if (phaseIndex === 2) moonCtx.fillRect(0,0,128,256);
+            else if (phaseIndex === 3) moonCtx.fillRect(0,0,64,256);
+            else if (phaseIndex === 5) moonCtx.fillRect(192,0,64,256);
+            else if (phaseIndex === 6) moonCtx.fillRect(128,0,128,256);
+            else if (phaseIndex === 7) moonCtx.fillRect(64,0,192,256);
+            
+            moonCtx.globalCompositeOperation = "source-over";
+            moonTex.needsUpdate = true;
+        }
 
         // Add Ocean
         const oceanGeo = new THREE.PlaneGeometry(30000, 30000);
@@ -1276,7 +1327,10 @@
             { id: 35, n: "Jaguar Piranha", rarity: 2, r: 1200, h: 30, z: "Jungle Kingdom", minW: 1.0, maxW: 5.0, i: "🐱", reqBait: "maso" },
             { id: 36, n: "Electric Eel", rarity: 3, r: 5000, h: 80, z: "Jungle Kingdom", minW: 5.0, maxW: 20.0, i: "🐍" },
             { id: 37, n: "Jungle King", rarity: 4, r: 18000, h: 150, z: "Jungle Kingdom", minW: 20.0, maxW: 100.0, i: "🐉", reqBait: "tropical_fruit" },
-            { id: 38, n: "Rainbow Betta", rarity: 2, r: 2500, h: 40, z: "Ocean", minW: 0.1, maxW: 0.5, i: "🌈", reqBait: "tropical_fruit" }
+            { id: 38, n: "Rainbow Betta", rarity: 2, r: 2500, h: 40, z: "Ocean", minW: 0.1, maxW: 0.5, i: "🌈", reqBait: "tropical_fruit" },
+            { id: 39, n: "Midnight Ray", rarity: 3, r: 9000, h: 100, z: "Coast", minW: 5.0, maxW: 20.0, i: "🦇", nightOnly: true },
+            { id: 40, n: "Night Crawler", rarity: 2, r: 3500, h: 50, z: "Western Cliffs", minW: 2.0, maxW: 8.0, i: "🕷️", nightOnly: true },
+            { id: 41, n: "Lunar Leviathan", rarity: 5, r: 85000, h: 400, z: "Ocean", minW: 800.0, maxW: 2500.0, i: "✨", lunarOnly: true }
         ];
 
         let player = { x: 1200, y: groundY, z: 0, dx: 0, dy: 0, dir: 1, fishing: false };
@@ -1795,6 +1849,8 @@
             let rodSpecial = rodsData[currentRodId].special;
 
             let possible = fishTable.filter(f => {
+                if (f.nightOnly && !isNight) return false;
+                if (f.lunarOnly && (!isNight || moonPhase !== 4 || zone !== "Ocean")) return false;
                 if (rodSpecial === "bait_master" && f.reqBait === currentBaitId) return true;
                 return (f.z === zone || f.z === "Ocean" || (zone === "Abyss" && f.z === "Abyss")) &&
                     (!f.isTrolling) &&
@@ -2009,6 +2065,13 @@
             document.getElementById("hp-bar").style.width = hp + "%";
             document.getElementById("loc-name").innerText = getZone().toUpperCase();
             document.getElementById("loc-pos").innerText = Math.floor(player.x);
+            
+            let hrs = Math.floor(gameTime);
+            let mins = Math.floor((gameTime - hrs) * 60);
+            document.getElementById("time-display").innerText = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+            document.getElementById("time-display").style.color = isNight ? "#81d4fa" : "#ffd700";
+            document.getElementById("moon-display").innerText = MOON_PHASES[moonPhase];
+            
             document.getElementById("trolling-indicator").style.display = isTrolling ? "inline" : "none";
             document.getElementById("inv-count").innerText = inventory.length;
             document.getElementById("inv-max").innerText = invCapacity;
@@ -3221,7 +3284,8 @@
                 currentBaitId, ownedBaitIds,
                 hasBackpack, invCapacity,
                 x: player.x, z: player.z, dx: player.dx, dy: player.dy, dir: player.dir,
-                merchantX: travelingMerchant.x, merchantDx: travelingMerchant.dx
+                merchantX: travelingMerchant.x, merchantDx: travelingMerchant.dx,
+                gameTime, gameDays, moonPhase
             };
             localStorage.setItem("fisherman_beta_save", JSON.stringify(data));
         }
@@ -3231,6 +3295,9 @@
             if (saved) {
                 try {
                     const d = JSON.parse(saved);
+                    if (d.gameTime !== undefined) gameTime = d.gameTime;
+                    if (d.gameDays !== undefined) gameDays = d.gameDays;
+                    if (d.moonPhase !== undefined) moonPhase = d.moonPhase;
                     if (d.money !== undefined) money = d.money;
                     if (d.hp !== undefined) hp = d.hp;
                     if (d.ox !== undefined) ox = d.ox;
@@ -3282,6 +3349,35 @@
             const time = performance.now();
             let delta = (time - prevTime) / 1000;
             if (delta > 0.1) delta = 0.1; // Cap delta to avoid math blowup on lag
+
+            // --- TIME OF DAY LOGIC ---
+            const timeScale = 0.10; // 1 real second = 0.10 game hours (approx 4 real minutes per full day)
+            gameTime += delta * timeScale;
+            if (gameTime >= 24) {
+                gameTime -= 24;
+                gameDays++;
+                moonPhase = (gameDays) % 8;
+            }
+            isNight = (gameTime < 5 || gameTime > 19);
+            
+            if (lastPhaseUpdate !== moonPhase) {
+                if (typeof updateMoonTexture !== 'undefined') updateMoonTexture(moonPhase);
+                lastPhaseUpdate = moonPhase;
+            }
+
+            // Update visuals based on time
+            let timeProgress = gameTime / 24; // 0 to 1
+            let angle = (timeProgress - 0.25) * Math.PI * 2;
+            if (celestialGroup) celestialGroup.rotation.z = -angle;
+
+            let dayNightMix = Math.sin(timeProgress * Math.PI * 2 - Math.PI / 2); // -1 at midnight, 1 at noon
+            dayNightMix = (dayNightMix + 1) / 2; // 0 to 1
+            
+            let skyColor = new THREE.Color().lerpColors(new THREE.Color(0x0a0a2a), new THREE.Color(0x87ceeb), dayNightMix);
+            scene.background = skyColor;
+            
+            dirLight.intensity = Math.max(0.05, dayNightMix * 0.8);
+            ambientLight.intensity = Math.max(0.15, dayNightMix * 0.6);
 
             // Allow movement even when unlocked
             // Determine direction based on WASD

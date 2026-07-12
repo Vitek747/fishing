@@ -118,12 +118,127 @@
             scrollbar-width: none;
         }
 
-        #catalog,
         #rod-catalog,
         #bait-catalog,
         #inventory-list {
             font-size: 7px;
             line-height: 1.6;
+        }
+
+        /* FISH CATALOG MODAL */
+        #fishCatalogModal {
+            width: 720px;
+            max-height: 82vh;
+            overflow: hidden;
+            display: none;
+            flex-direction: column;
+        }
+
+        .fish-catalog-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin: 10px 0 6px;
+        }
+
+        .fish-tab-btn {
+            background: #d7ccc8;
+            border: 2px solid var(--border);
+            padding: 5px 10px;
+            font-size: 6px;
+            font-family: 'Press Start 2P';
+            cursor: pointer;
+            color: #4e342e;
+            transition: 0.15s;
+        }
+
+        .fish-tab-btn.active {
+            background: var(--border);
+            color: #fff;
+        }
+
+        .fish-catalog-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 8px;
+            max-height: 56vh;
+            overflow-y: auto;
+            padding: 10px;
+            background: rgba(0,0,0,0.03);
+            border: 2px inset rgba(0,0,0,0.1);
+        }
+
+        .fish-catalog-grid::-webkit-scrollbar { width: 8px; }
+        .fish-catalog-grid::-webkit-scrollbar-track { background: #d7ccc8; }
+        .fish-catalog-grid::-webkit-scrollbar-thumb { background: #5d4037; border-radius: 4px; }
+
+        .fish-card {
+            background: #fff;
+            border: 4px solid var(--border);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.2s;
+            position: relative;
+            box-shadow: 4px 4px 0 rgba(0,0,0,0.1);
+        }
+
+        .fish-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.18);
+        }
+
+        .fish-card.locked-fish {
+            filter: grayscale(1);
+            opacity: 0.55;
+            background: #e8e8e8;
+            border-color: #9e9e9e;
+        }
+
+        .fish-card-icon {
+            font-size: 30px;
+            margin-bottom: 6px;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fish-card-name {
+            font-size: 7px;
+            margin-bottom: 6px;
+            color: #333;
+            min-height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fish-card-info {
+            font-size: 5.5px;
+            color: #7f8c8d;
+            line-height: 1.7;
+            flex-grow: 1;
+            margin-bottom: 6px;
+        }
+
+        .fish-dots-btn {
+            width: 100%;
+            padding: 6px;
+            font-size: 6px;
+            font-family: 'Press Start 2P';
+            border: 2px solid var(--border);
+            cursor: pointer;
+            background: #7f8c8d;
+            color: #fff;
+            transition: 0.15s;
+        }
+
+        .fish-dots-btn:hover {
+            background: #2c3e50;
         }
 
         .row {
@@ -481,17 +596,14 @@
             <div class="nav-display">
                 LOCATION: <span id="loc-name" style="color:#81d4fa">---</span><br>
                 POSITION: <span id="loc-pos">0</span>m <span id="luck-display" style="color:#80cbc4"></span><br>
+                TIME: <span id="time-display" style="color:#f1c40f"></span> <span id="activity-display" style="font-size:5px;"></span><br>
                 <span id="guide" style="color:var(--gold); margin-top: 4px; display: block;"></span>
                 <span id="merchant-guide" style="color:#ffcc00; margin-top: 4px; display: block;"></span>
             </div>
             <div style="color:#388e3c; font-size:16px; margin-bottom:5px; text-shadow: 1px 1px #000;">$ <span
                     id="money">200</span></div>
-            <div style="font-size: 7px; margin-top: 6px;">OXYGEN <span id="trolling-indicator"
+            <div style="font-size: 7px; margin-top: 6px;">HEALTH <span id="trolling-indicator"
                     style="color:#f1c40f; font-size:6px; display:none;">(TROLLING ON)</span></div>
-            <div class="bar-container">
-                <div id="ox-bar" class="bar-fill" style="width: 100%; background: var(--ox);"></div>
-            </div>
-            <div style="font-size: 7px;">HEALTH</div>
             <div class="bar-container">
                 <div id="hp-bar" class="bar-fill" style="width: 100%; background: var(--danger);"></div>
             </div>
@@ -520,13 +632,9 @@
                 <span id="bait-icon">▶</span>
             </div>
 
-            <div class="list-title collapsible" onclick="toggleSection('cat-box', 'cat-icon')">
+            <div class="list-title collapsible" onclick="openFishCatalogModal()">
                 <span>FISH CATALOG</span>
-                <span id="cat-icon">▶</span>
-            </div>
-            <div id="cat-box" style="display:none;">
-                <div id="catalog" class="scrollable-list"></div>
-                <div class="scroll-tip">Scroll inside the list</div>
+                <span>▶</span>
             </div>
         </div>
     </div>
@@ -610,6 +718,16 @@
             [ESC]</button>
     </div>
 
+    <!-- FISH CATALOG MODAL -->
+    <div id="fishCatalogModal" class="modal">
+        <h2 style="color:#2c3e50; font-size:12px; text-align:center; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px;">
+            🐟 FISH CATALOG (<span id="fishCatalogCount">0</span>/<span id="fishCatalogTotal">0</span>)
+        </h2>
+        <div class="fish-catalog-tabs" id="fishCatalogTabs"></div>
+        <div class="fish-catalog-grid" id="fishCatalogGrid"></div>
+        <button onclick="closeAll()" class="btn" style="background:#c62828; margin-top:14px; width:100%;">CLOSE [ESC]</button>
+    </div>
+
     <div id="hit-btn" onmousedown="handleHit()">HIT!</div>!</div>
     <canvas id="game"></canvas>
 
@@ -620,6 +738,8 @@
         window.onresize = res; res();
 
         let money = 200, hp = 100, ox = 100, hasBoat = false, inBoat = false, boatX = 1000;
+        let gameTime = 12; // 0 to 24
+        let moonPhase = 4; // 0 to 7
         // ownedBoats: array of {type, x} for every boat the player owns
         let ownedBoats = [];
         let travelingMerchant = {
@@ -657,6 +777,33 @@
             return `<span style="font-size:${fs};background:${tier.color};color:#fff;padding:1px 3px;border-radius:2px;">${tier.name}</span>`;
         }
         const groundY = canvas.height - 180;
+        let bubblesCount = 10;
+        let lastBubblePopTime = 0;
+        let bubbleParticles = [];
+
+        function getSeaFloorDepth(x) {
+            let fade = 0;
+            if (x > 8500) fade = Math.min(1, (x - 8500) / 1000);
+            else if (x < -9500) fade = Math.min(1, (-9500 - x) / 1000);
+            let drop = Math.sin(x * 0.005) * 15 + Math.cos(x * 0.012) * 8;
+            return groundY + 140 + drop + fade * 500;
+        }
+
+        function spawnPopParticles(x, y) {
+            for (let i = 0; i < 6; i++) {
+                let angle = Math.random() * Math.PI * 2;
+                let speed = 1 + Math.random() * 2;
+                bubbleParticles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    decay: 0.05 + Math.random() * 0.05
+                });
+            }
+        }
+
         let clouds = Array.from({ length: 10 }, () => ({ x: Math.random() * 10000 - 2000, y: Math.random() * 150 + 20, s: Math.random() * 0.5 + 0.2 }));
 
         // QUESTY ESKYMÁKA (text odstraněn, generuje se dynamicky)
@@ -771,46 +918,50 @@
         ];
 
         // rarity: 0=Common 1=Uncommon 2=Rare 3=Epic 4=Legendary 5=Mythic
+        // season: "dawn"=5-8h peak, "day"=8-17h peak, "dusk"=17-20h peak, "night"=20-5h peak, "any"=no preference
         const fishTable = [
-            { id: 22, n: "Roach", rarity: 0, r: 70, h: 4, z: "Coast", minW: 0.2, maxW: 0.8, i: "🐟" },
-            { id: 0, n: "Sardine", rarity: 0, r: 40, h: 4, z: "Coast", minW: 0.1, maxW: 0.4, i: "🐟" },
-            { id: 1, n: "Carp", rarity: 0, r: 110, h: 8, z: "Coast", minW: 1.5, maxW: 6.0, i: "🐠" },
-            { id: 12, n: "Crucian", rarity: 1, r: 180, h: 10, z: "Coast", minW: 0.5, maxW: 2.0, i: "🐟", reqBait: "chleba" },
-            { id: 7, n: "Bream", rarity: 1, r: 250, h: 12, z: "Coast", minW: 1.0, maxW: 4.5, i: "🐠", reqBait: "chleba" },
-            { id: 23, n: "Grass Carp", rarity: 2, r: 800, h: 28, z: "Coast", minW: 3.0, maxW: 15.0, i: "🐠", reqBait: "chleba" },
-            { id: 9, n: "Tench", rarity: 2, r: 1500, h: 35, z: "Coast", minW: 2.0, maxW: 6.0, i: "🐟", reqBait: "testo" },
-            { id: 17, n: "Goldfish", rarity: 5, r: 50000, h: 30, z: "Coast", minW: 0.1, maxW: 0.5, i: "✨", reqBait: "testo" },
-            { id: 24, n: "Grayling", rarity: 1, r: 450, h: 18, z: "Western Cliffs", minW: 0.4, maxW: 1.2, i: "🐟", reqBait: "moucha" },
-            { id: 2, n: "Perch", rarity: 1, r: 280, h: 15, z: "Western Cliffs", minW: 0.5, maxW: 2.5, i: "🐟" },
-            { id: 3, n: "Cod", rarity: 1, r: 550, h: 25, z: "Western Cliffs", minW: 3.0, maxW: 12.0, i: "🐡" },
-            { id: 8, n: "Eel", rarity: 2, r: 600, h: 22, z: "Western Cliffs", minW: 1.5, maxW: 5.0, i: "🐍", reqBait: "zizala" },
-            { id: 14, n: "Zander", rarity: 2, r: 2800, h: 50, z: "Western Cliffs", minW: 2.0, maxW: 12.0, i: "🐠", reqBait: "trpytka" },
-            { id: 13, n: "Catfish", rarity: 3, r: 4000, h: 75, z: "Western Cliffs", minW: 10.0, maxW: 80.0, i: "🐟", reqBait: "maso" },
-            { id: 4, n: "Tuna", rarity: 1, r: 1200, h: 45, z: "Tropics", minW: 20.0, maxW: 150.0, i: "🐟" },
-            { id: 25, n: "Trevally", rarity: 2, r: 3500, h: 70, z: "Tropics", minW: 10.0, maxW: 50.0, i: "🐟", reqBait: "zizala" },
-            { id: 26, n: "Mahi-mahi", rarity: 2, r: 6000, h: 85, z: "Tropics", minW: 8.0, maxW: 30.0, i: "🐠", reqBait: "trpytka" },
-            { id: 15, n: "Barracuda", rarity: 3, r: 8000, h: 95, z: "Tropics", minW: 5.0, maxW: 40.0, i: "🦈", reqBait: "trpytka" },
-            { id: 11, n: "Sailfish", rarity: 4, r: 15000, h: 140, z: "Tropics", minW: 30.0, maxW: 100.0, i: "🐬", reqBait: "wobler" },
-            { id: 16, n: "Marlin", rarity: 4, r: 25000, h: 180, z: "Tropics", minW: 50.0, maxW: 400.0, i: "🐬", reqBait: "wobler" },
-            { id: 18, n: "Ice Cod", rarity: 1, r: 900, h: 25, z: "Ice Kingdom", minW: 2.0, maxW: 10.0, i: "🐟" },
-            { id: 19, n: "Walrus", rarity: 2, r: 3000, h: 60, z: "Ice Kingdom", minW: 100.0, maxW: 350.0, i: "🦭" },
-            { id: 21, n: "Narwhal", rarity: 4, r: 20000, h: 130, z: "Ice Kingdom", minW: 800.0, maxW: 1600.0, i: "🦄", reqBait: "moucha" },
-            { id: 20, n: "Orca", rarity: 4, r: 45000, h: 220, z: "Ice Kingdom", minW: 2000.0, maxW: 6000.0, i: "🐋", reqBait: "maso" },
-            { id: 10, n: "Pike", rarity: 2, r: 3500, h: 65, z: "Ocean", minW: 4.0, maxW: 25.0, i: "🦈", reqBait: "trpytka" },
-            { id: 5, n: "Shark", rarity: 3, r: 4500, h: 90, z: "Ocean", minW: 150.0, maxW: 800.0, i: "🦈", reqBait: "maso" },
-            { id: 27, n: "Swordfish", rarity: 3, r: 18000, h: 160, z: "Ocean", minW: 100.0, maxW: 500.0, i: "🐬", reqBait: "wobler" },
-            { id: 28, n: "Anglerfish", rarity: 3, r: 12000, h: 150, z: "Abyss", minW: 30.0, maxW: 80.0, i: "🐙", reqBait: "maso" },
-            { id: 33, n: "Shadow Ray", rarity: 3, r: 28000, h: 170, z: "Abyss", minW: 200.0, maxW: 800.0, i: "🦇", reqBait: "chobotnice" },
-            { id: 31, n: "Void Eel", rarity: 4, r: 35000, h: 200, z: "Abyss", minW: 80.0, maxW: 300.0, i: "🐍", reqBait: "diamant" },
-            { id: 6, n: "KRAKEN", rarity: 5, r: 75000, h: 400, z: "Abyss", minW: 2000.0, maxW: 10000.0, i: "🦑", reqBait: "chobotnice" },
-            { id: 32, n: "Deep Leviathan", rarity: 5, r: 90000, h: 500, z: "Abyss", minW: 5000.0, maxW: 20000.0, i: "🐉", reqBait: "diamant" },
-            { id: 29, n: "Giant Halibut", rarity: 3, r: 15000, h: 120, z: "Ocean", minW: 50.0, maxW: 200.0, i: "🐠", isTrolling: true, reqBait: "maso" },
-            { id: 30, n: "Great White", rarity: 5, r: 60000, h: 300, z: "Abyss", minW: 1000.0, maxW: 3000.0, i: "🦈", isTrolling: true, reqBait: "chobotnice" },
-            { id: 34, n: "Macaw Fish", rarity: 0, r: 150, h: 8, z: "Jungle Kingdom", minW: 0.5, maxW: 2.0, i: "🦜" },
-            { id: 35, n: "Jaguar Piranha", rarity: 2, r: 1200, h: 30, z: "Jungle Kingdom", minW: 1.0, maxW: 5.0, i: "🐱", reqBait: "maso" },
-            { id: 36, n: "Electric Eel", rarity: 3, r: 5000, h: 80, z: "Jungle Kingdom", minW: 5.0, maxW: 20.0, i: "🐍" },
-            { id: 37, n: "Jungle King", rarity: 4, r: 18000, h: 150, z: "Jungle Kingdom", minW: 20.0, maxW: 100.0, i: "🐉", reqBait: "tropical_fruit" },
-            { id: 38, n: "Rainbow Betta", rarity: 2, r: 2500, h: 40, z: "Ocean", minW: 0.1, maxW: 0.5, i: "🌈", reqBait: "tropical_fruit" }
+            { id: 22, n: "Roach",         rarity: 0, r: 70,     h: 4,   z: "Coast",          minW: 0.2,   maxW: 0.8,     i: "🐟",  season: "dawn" },
+            { id: 0,  n: "Sardine",       rarity: 0, r: 40,     h: 4,   z: "Coast",          minW: 0.1,   maxW: 0.4,     i: "🐟",  season: "day" },
+            { id: 1,  n: "Carp",          rarity: 0, r: 110,    h: 8,   z: "Coast",          minW: 1.5,   maxW: 6.0,     i: "🐠",  season: "day" },
+            { id: 12, n: "Crucian",       rarity: 1, r: 180,    h: 10,  z: "Coast",          minW: 0.5,   maxW: 2.0,     i: "🐟",  season: "dawn",  reqBait: "chleba" },
+            { id: 7,  n: "Bream",         rarity: 1, r: 250,    h: 12,  z: "Coast",          minW: 1.0,   maxW: 4.5,     i: "🐠",  season: "dusk",  reqBait: "chleba" },
+            { id: 23, n: "Grass Carp",    rarity: 2, r: 800,    h: 28,  z: "Coast",          minW: 3.0,   maxW: 15.0,    i: "🐠",  season: "day",   reqBait: "chleba" },
+            { id: 9,  n: "Tench",         rarity: 2, r: 1500,   h: 35,  z: "Coast",          minW: 2.0,   maxW: 6.0,     i: "🐟",  season: "dawn",  reqBait: "testo" },
+            { id: 17, n: "Goldfish",      rarity: 5, r: 50000,  h: 30,  z: "Coast",          minW: 0.1,   maxW: 0.5,     i: "✨",  season: "day",   reqBait: "testo" },
+            { id: 24, n: "Grayling",      rarity: 1, r: 450,    h: 18,  z: "Western Cliffs", minW: 0.4,   maxW: 1.2,     i: "🐟",  season: "dawn",  reqBait: "moucha" },
+            { id: 2,  n: "Perch",         rarity: 1, r: 280,    h: 15,  z: "Western Cliffs", minW: 0.5,   maxW: 2.5,     i: "🐟",  season: "dusk" },
+            { id: 3,  n: "Cod",           rarity: 1, r: 550,    h: 25,  z: "Western Cliffs", minW: 3.0,   maxW: 12.0,    i: "🐡",  season: "day" },
+            { id: 8,  n: "Eel",           rarity: 2, r: 600,    h: 22,  z: "Western Cliffs", minW: 1.5,   maxW: 5.0,     i: "🐍",  season: "night", reqBait: "zizala" },
+            { id: 14, n: "Zander",        rarity: 2, r: 2800,   h: 50,  z: "Western Cliffs", minW: 2.0,   maxW: 12.0,    i: "🐠",  season: "dusk",  reqBait: "trpytka" },
+            { id: 13, n: "Catfish",       rarity: 3, r: 4000,   h: 75,  z: "Western Cliffs", minW: 10.0,  maxW: 80.0,    i: "🐟",  season: "night", reqBait: "maso" },
+            { id: 4,  n: "Tuna",          rarity: 1, r: 1200,   h: 45,  z: "Tropics",        minW: 20.0,  maxW: 150.0,   i: "🐟",  season: "day" },
+            { id: 25, n: "Trevally",      rarity: 2, r: 3500,   h: 70,  z: "Tropics",        minW: 10.0,  maxW: 50.0,    i: "🐟",  season: "dawn",  reqBait: "zizala" },
+            { id: 26, n: "Mahi-mahi",     rarity: 2, r: 6000,   h: 85,  z: "Tropics",        minW: 8.0,   maxW: 30.0,    i: "🐠",  season: "day",   reqBait: "trpytka" },
+            { id: 15, n: "Barracuda",     rarity: 3, r: 8000,   h: 95,  z: "Tropics",        minW: 5.0,   maxW: 40.0,    i: "🦈",  season: "dusk",  reqBait: "trpytka" },
+            { id: 11, n: "Sailfish",      rarity: 4, r: 15000,  h: 140, z: "Tropics",        minW: 30.0,  maxW: 100.0,   i: "🐬",  season: "day",   reqBait: "wobler" },
+            { id: 16, n: "Marlin",        rarity: 4, r: 25000,  h: 180, z: "Tropics",        minW: 50.0,  maxW: 400.0,   i: "🐬",  season: "day",   reqBait: "wobler" },
+            { id: 18, n: "Ice Cod",       rarity: 1, r: 900,    h: 25,  z: "Ice Kingdom",    minW: 2.0,   maxW: 10.0,    i: "🐟",  season: "day" },
+            { id: 19, n: "Walrus",        rarity: 2, r: 3000,   h: 60,  z: "Ice Kingdom",    minW: 100.0, maxW: 350.0,   i: "🦭",  season: "day" },
+            { id: 21, n: "Narwhal",       rarity: 4, r: 20000,  h: 130, z: "Ice Kingdom",    minW: 800.0, maxW: 1600.0,  i: "🦄",  season: "dusk",  reqBait: "moucha" },
+            { id: 20, n: "Orca",          rarity: 4, r: 45000,  h: 220, z: "Ice Kingdom",    minW: 2000.0,maxW: 6000.0,  i: "🐋",  season: "any",   reqBait: "maso" },
+            { id: 10, n: "Pike",          rarity: 2, r: 3500,   h: 65,  z: "Ocean",          minW: 4.0,   maxW: 25.0,    i: "🦈",  season: "dawn",  reqBait: "trpytka" },
+            { id: 5,  n: "Shark",         rarity: 3, r: 4500,   h: 90,  z: "Ocean",          minW: 150.0, maxW: 800.0,   i: "🦈",  season: "night", reqBait: "maso" },
+            { id: 27, n: "Swordfish",     rarity: 3, r: 18000,  h: 160, z: "Ocean",          minW: 100.0, maxW: 500.0,   i: "🐬",  season: "day",   reqBait: "wobler" },
+            { id: 28, n: "Anglerfish",    rarity: 3, r: 12000,  h: 150, z: "Abyss",          minW: 30.0,  maxW: 80.0,    i: "🐙",  season: "night", reqBait: "maso" },
+            { id: 33, n: "Shadow Ray",    rarity: 3, r: 28000,  h: 170, z: "Abyss",          minW: 200.0, maxW: 800.0,   i: "🦇",  season: "night", reqBait: "chobotnice" },
+            { id: 31, n: "Void Eel",      rarity: 4, r: 35000,  h: 200, z: "Abyss",          minW: 80.0,  maxW: 300.0,   i: "🐍",  season: "night", reqBait: "diamant" },
+            { id: 6,  n: "KRAKEN",        rarity: 5, r: 75000,  h: 400, z: "Abyss",          minW: 2000.0,maxW: 10000.0, i: "🦑",  season: "night", reqBait: "chobotnice" },
+            { id: 32, n: "Deep Leviathan",rarity: 5, r: 90000,  h: 500, z: "Abyss",          minW: 5000.0,maxW: 20000.0, i: "🐉",  season: "night", reqBait: "diamant" },
+            { id: 29, n: "Giant Halibut", rarity: 3, r: 15000,  h: 120, z: "Ocean",          minW: 50.0,  maxW: 200.0,   i: "🐠",  season: "day",   isTrolling: true, reqBait: "maso" },
+            { id: 30, n: "Great White",   rarity: 5, r: 60000,  h: 300, z: "Abyss",          minW: 1000.0,maxW: 3000.0,  i: "🦈",  season: "night", isTrolling: true, reqBait: "chobotnice" },
+            { id: 34, n: "Macaw Fish",    rarity: 0, r: 150,    h: 8,   z: "Jungle Kingdom", minW: 0.5,   maxW: 2.0,     i: "🦜",  season: "day" },
+            { id: 35, n: "Jaguar Piranha",rarity: 2, r: 1200,   h: 30,  z: "Jungle Kingdom", minW: 1.0,   maxW: 5.0,     i: "🐱",  season: "dusk",  reqBait: "maso" },
+            { id: 36, n: "Electric Eel",  rarity: 3, r: 5000,   h: 80,  z: "Jungle Kingdom", minW: 5.0,   maxW: 20.0,    i: "🐍",  season: "night" },
+            { id: 37, n: "Jungle King",   rarity: 4, r: 18000,  h: 150, z: "Jungle Kingdom", minW: 20.0,  maxW: 100.0,   i: "🐉",  season: "any",   reqBait: "tropical_fruit" },
+            { id: 38, n: "Rainbow Betta", rarity: 2, r: 2500,   h: 40,  z: "Ocean",          minW: 0.1,   maxW: 0.5,     i: "🌈",  season: "day",   reqBait: "tropical_fruit" },
+            { id: 39, n: "Night Crawler", rarity: 1, r: 800,    h: 25,  z: "Ocean",          minW: 1.0,   maxW: 4.0,     i: "🌑",  season: "night", isNight: true },
+            { id: 40, n: "Midnight Ray",  rarity: 2, r: 3200,   h: 50,  z: "Coast",          minW: 10.0,  maxW: 30.0,    i: "🦇",  season: "night", isNight: true, reqBait: "maso" },
+            { id: 41, n: "Lunar Seraph",  rarity: 5, r: 150000, h: 450, z: "Ocean",          minW: 50.0,  maxW: 200.0,   i: "✨",  season: "night", isLunar: true, reqBait: "diamant" }
         ];
 
         let player = { x: 1200, y: groundY, dx: 0, dy: 0, dir: 1, fishing: false };
@@ -903,7 +1054,6 @@
 
         function refreshUIPanels() {
             if (document.getElementById("inv-box").style.display !== "none") drawInventoryList();
-            if (document.getElementById("cat-box").style.display !== "none") drawFishCatalog();
         }
 
         function cycleSelection(type, dir) {
@@ -1229,13 +1379,83 @@
 
         function closeAll() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
 
+        // Fish activity by time-of-day
+        // Returns { mult: biteDelayMultiplier, label, color }
+        // mult <1 = faster bites (active), >1 = slower (sluggish)
+        function getFishActivity() {
+            let gt = gameTime;
+            // Key time windows:
+            //  Dawn    5-7    FEEDING FRENZY  (0.35x)
+            //  Morning 7-11   ACTIVE          (0.65x)
+            //  Midday  11-15  NEUTRAL         (1.0x)
+            //  Afternoon15-17 ACTIVE          (0.70x)
+            //  Dusk    17-20  FEEDING FRENZY  (0.35x)
+            //  Evening 20-22  SLOW            (1.6x)
+            //  Night   22-3   VERY SLOW       (2.6x)
+            //  Pre-dawn 3-5   ALMOST DEAD     (3.5x)
+            const stops = [
+                [0,   3.5, "DORMANT",        "#6c5ce7"],
+                [3,   3.5, "DORMANT",        "#6c5ce7"],
+                [5,   0.35,"FEEDING FRENZY", "#00b894"],
+                [7,   0.65,"ACTIVE",         "#55efc4"],
+                [11,  1.0, "NEUTRAL",        "#b2bec3"],
+                [15,  0.70,"ACTIVE",         "#55efc4"],
+                [17,  0.35,"FEEDING FRENZY", "#00b894"],
+                [20,  1.6, "SLOW",           "#fdcb6e"],
+                [22,  2.6, "VERY SLOW",      "#e17055"],
+                [24,  3.5, "DORMANT",        "#6c5ce7"],
+            ];
+            for (let i = 0; i < stops.length - 1; i++) {
+                let a = stops[i], b = stops[i+1];
+                if (gt >= a[0] && gt < b[0]) {
+                    let p = (gt - a[0]) / (b[0] - a[0]);
+                    p = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p+2,2)/2;
+                    let mult = a[1] + (b[1] - a[1]) * p;
+                    // Label/color: pick whichever stop is dominant
+                    let which = p < 0.5 ? a : b;
+                    return { mult, label: which[2], color: which[3] };
+                }
+            }
+            return { mult: 1.0, label: "NEUTRAL", color: "#b2bec3" };
+        }
+
+        // Season icons & peak ranges (game hours)
+        const SEASONS = {
+            dawn:  { icon: "🌅", label: "Dawn",  peak: [5, 8],   off: [12, 20] },
+            day:   { icon: "☀️",  label: "Day",   peak: [8, 17],  off: [20, 5]  },
+            dusk:  { icon: "🌇", label: "Dusk",  peak: [17, 20], off: [6, 14]  },
+            night: { icon: "🌙", label: "Night", peak: [20, 5],  off: [8, 17]  },
+            any:   { icon: "🔄", label: "Any",   peak: null,     off: null     },
+        };
+
+        // Returns a bite-delay multiplier based on whether it's the fish's peak or off-season
+        // Peak = 0.4x (very fast), Off-season = 2.5x (very slow), Neutral = 1.0x
+        function getSeasonMult(fish) {
+            let s = SEASONS[fish.season || "any"];
+            if (!s || !s.peak) return 1.0;
+            let gt = gameTime;
+            // Check if in peak range (handles night wrap-around)
+            function inRange(t, range) {
+                let [a, b] = range;
+                if (a <= b) return t >= a && t < b;
+                return t >= a || t < b; // wraps midnight
+            }
+            if (inRange(gt, s.peak)) return 0.4;
+            if (s.off && inRange(gt, s.off)) return 2.5;
+            return 1.0;
+        }
+
         function startFishing() {
             if (inventory.length >= invCapacity) { showMsg("BACKPACK IS FULL!"); return; }
             let zone = getZone();
             let rodPower = rodsData[currentRodId].p;
             let rodSpecial = rodsData[currentRodId].special;
 
+            let isNightTime = gameTime > 19 || gameTime < 5;
+
             let possible = fishTable.filter(f => {
+                if (f.isNight && !isNightTime) return false;
+                if (f.isLunar && (!isNightTime || moonPhase !== 4 || zone !== "Ocean")) return false;
                 if (rodSpecial === "bait_master" && f.reqBait === currentBaitId) return true;
                 return (f.z === zone || f.z === "Ocean" || (zone === "Abyss" && f.z === "Abyss")) &&
                     (!f.isTrolling) &&
@@ -1254,7 +1474,22 @@
             currentFish = possible[fishIdx];
 
             player.fishing = true;
-            showMsg("WAITING FOR A BITE...");
+            let activity = getFishActivity();
+            let seasonMult = getSeasonMult(currentFish);
+            let baseDelay = 1500 + Math.random() * 2000;
+            let biteDelay = baseDelay * activity.mult * seasonMult;
+            biteDelay = Math.max(400, Math.min(9000, biteDelay));
+
+            let sData = SEASONS[currentFish.season || "any"];
+            let inPeak = sData.peak && getSeasonMult(currentFish) < 0.5;
+            let inOff  = sData.off  && getSeasonMult(currentFish) > 1.5;
+            if (activity.mult > 2.0 || inOff) {
+                showMsg(`WAITING... Fish are ${activity.label.toLowerCase()} right now.`);
+            } else if (activity.mult < 0.5 || inPeak) {
+                showMsg(`🎣 ${currentFish.n} biting hard! (${sData ? sData.icon : ''} peak season)`);
+            } else {
+                showMsg("WAITING FOR A BITE...");
+            }
 
             setTimeout(() => {
                 if (player.fishing && !fightInProgress) {
@@ -1263,7 +1498,7 @@
                     fightInProgress = true;
                     spawnHit();
                 }
-            }, 1500 + Math.random() * 2000);
+            }, biteDelay);
         }
 
         function handleTrolling() {
@@ -1275,11 +1510,20 @@
                 let zone = getZone();
                 let rodPower = rodsData[currentRodId].p;
 
-                let possible = fishTable.filter(f => f.isTrolling && (f.z === zone || zone === "Ocean") && f.reqBait === currentBaitId);
+                let isNightTime = gameTime >= 20 || gameTime < 4;
+
+                let possible = fishTable.filter(f => {
+                    if (f.isNight && !isNightTime) return false;
+                    if (f.isLunar && (!isNightTime || moonPhase !== 4 || zone !== "Ocean")) return false;
+                    return f.isTrolling && (f.z === zone || zone === "Ocean") && f.reqBait === currentBaitId;
+                });
 
                 let curRodUpgradesTrolling = rodUpgrades[currentRodId] || 0;
                 let totalBoostT = curRodUpgradesTrolling + luckLevel;
-                if (possible.length > 0 && Math.random() < 0.05 + (totalBoostT * 0.01)) {
+                let activity = getFishActivity();
+                // Base chance 5% + upgrades, scaled by activity (frenzy doubles it, dormant halves it)
+                let biteChance = (0.05 + totalBoostT * 0.01) / activity.mult;
+                if (possible.length > 0 && Math.random() < biteChance) {
                     possible.sort((a, b) => a.rarity - b.rarity || a.r - b.r);
                     let fishIdx = Math.floor(Math.random() * possible.length);
                     for (let i = 0; i < totalBoostT; i++) {
@@ -1426,10 +1670,16 @@
 
         function updateHUD() {
             document.getElementById("money").innerText = Math.floor(money);
-            document.getElementById("ox-bar").style.width = ox + "%";
             document.getElementById("hp-bar").style.width = hp + "%";
             document.getElementById("loc-name").innerText = getZone().toUpperCase();
             document.getElementById("loc-pos").innerText = Math.floor(player.x);
+            let timeStr = `${Math.floor(gameTime).toString().padStart(2, '0')}:${Math.floor((gameTime % 1) * 60).toString().padStart(2, '0')}`;
+            let moonIcons = ["🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘"];
+            let timeEl = document.getElementById("time-display");
+            if (timeEl) timeEl.innerText = `${timeStr} ${moonIcons[moonPhase]}`;
+            let act = getFishActivity();
+            let actEl = document.getElementById("activity-display");
+            if (actEl) { actEl.innerText = `🎣 ${act.label}`; actEl.style.color = act.color; }
             document.getElementById("trolling-indicator").style.display = isTrolling ? "inline" : "none";
             document.getElementById("inv-count").innerText = inventory.length;
             document.getElementById("inv-max").innerText = invCapacity;
@@ -1464,19 +1714,106 @@
                 </div>`;
             });
         }
-        function drawFishCatalog() {
-            const cat = document.getElementById("catalog"); cat.innerHTML = "";
-            // Sort by rarity desc, then name
+        function drawFishCatalog() { /* legacy stub – catalog now opens as modal */ }
+
+        // ── FISH CATALOG MODAL ────────────────────────────────────────────────
+        let _fishCatalogZone = "ALL";
+
+        function openFishCatalogModal() {
+            // Update counters
+            document.getElementById("fishCatalogCount").innerText = caughtFishIds.size;
+            document.getElementById("fishCatalogTotal").innerText = fishTable.length;
+            // Build zone tab list
+            buildFishCatalogTabs();
+            renderFishCatalogCards(_fishCatalogZone);
+            document.getElementById("fishCatalogModal").style.display = "flex";
+        }
+
+        function buildFishCatalogTabs() {
+            const tabsEl = document.getElementById("fishCatalogTabs");
+            tabsEl.innerHTML = "";
+            const zones = ["ALL", ...new Set(fishTable.map(f => f.isTrolling ? "Trolling" : f.z))];
+            zones.forEach(z => {
+                const btn = document.createElement("button");
+                btn.className = "fish-tab-btn" + (z === _fishCatalogZone ? " active" : "");
+                btn.innerText = z;
+                btn.onclick = () => { _fishCatalogZone = z; buildFishCatalogTabs(); renderFishCatalogCards(z); };
+                tabsEl.appendChild(btn);
+            });
+        }
+
+        function renderFishCatalogCards(zoneFilter) {
+            const grid = document.getElementById("fishCatalogGrid");
+            grid.innerHTML = "";
+
             const sorted = [...fishTable].sort((a, b) => b.rarity - a.rarity || a.n.localeCompare(b.n));
             sorted.forEach(f => {
-                const ok = caughtFishIds.has(f.id);
-                let baitIcon = f.reqBait ? ` [${baitsData[f.reqBait].v}]` : '';
-                let zoneInfo = f.isTrolling ? '(Trolling)' : `(${f.z})`;
+                const fishZone = f.isTrolling ? "Trolling" : f.z;
+                if (zoneFilter !== "ALL" && fishZone !== zoneFilter) return;
+
+                const caught = caughtFishIds.has(f.id);
+                const card = document.createElement("div");
+                card.className = "fish-card" + (caught ? "" : " locked-fish");
+
                 const rb = getRarityBadge(f.rarity, true);
-                cat.innerHTML += `<div class="row" style="opacity:${ok ? 1 : 0.3}">
-            <span>${ok ? f.i + ' ' + f.n + baitIcon : '???'} ${ok ? rb : ''} <span style="font-size:5px; color:#7f8c8d;">${ok ? zoneInfo : ''}</span></span>
-            <span>${ok ? '$' + f.r : '---'}</span></div>`;
+                const sData = SEASONS[f.season || "any"];
+                const sMult = getSeasonMult(f);
+                const sDotColor = sMult < 0.5 ? "#00b894" : sMult > 1.5 ? "#e17055" : "#b2bec3";
+
+                let baitLine = f.reqBait ? `Best bait: ${baitsData[f.reqBait].v} ${baitsData[f.reqBait].n}` : "Bait: any";
+                let zoneLine  = f.isTrolling ? "Zone: Trolling" : `Zone: ${f.z}`;
+                let timeLine  = `Time: ${sData.icon} ${sData.label}`;
+                let statusDot = caught ? `<span style="color:${sDotColor};font-size:8px;">●</span>` : "";
+
+                if (caught) {
+                    card.innerHTML = `
+                        <div class="fish-card-icon">${f.i}</div>
+                        <div class="fish-card-name">${f.n} ${statusDot}</div>
+                        <div style="margin-bottom:5px;">${rb}</div>
+                        <div class="fish-card-info">
+                            ${zoneLine}<br>${baitLine}<br>${timeLine}
+                        </div>
+                        <button class="fish-dots-btn" onclick="showInspectFish(${f.id})">• • •</button>
+                    `;
+                } else {
+                    card.innerHTML = `
+                        <div class="fish-card-icon">🔒</div>
+                        <div class="fish-card-name">???</div>
+                        <div class="fish-card-info">${zoneLine}<br>Not yet caught</div>
+                    `;
+                }
+                grid.appendChild(card);
             });
+        }
+
+        function showInspectFish(fishId) {
+            const f = fishTable.find(x => x.id === fishId);
+            if (!f) return;
+            document.getElementById("inspectTitle").innerText = "INSPECT FISH";
+
+            const sData = SEASONS[f.season || "any"];
+            const sMult = getSeasonMult(f);
+            const sDotColor = sMult < 0.5 ? "#00b894" : sMult > 1.5 ? "#e17055" : "#b2bec3";
+            const rarityTier = RARITIES[f.rarity] || RARITIES[0];
+            const baitText = f.reqBait ? `${baitsData[f.reqBait].n} ${baitsData[f.reqBait].v}` : "Any bait";
+            const zoneText = f.isTrolling ? "Ocean (Trolling only)" : f.z;
+
+            let details = `
+                <div class="inspect-label">SPECIES</div><div class="inspect-value">${f.i} ${f.n}</div>
+                <div class="inspect-label">RARITY</div><div class="inspect-value" style="color:${rarityTier.color}">${rarityTier.name}</div>
+                <div class="inspect-label">SPAWN ZONE</div><div class="inspect-value">${zoneText}</div>
+                <div class="inspect-label">BEST BAIT</div><div class="inspect-value">${baitText}</div>
+                <div class="inspect-label">ACTIVE TIME</div><div class="inspect-value">${sData.icon} ${sData.label} <span style="color:${sDotColor}">●</span></div>
+                <div class="inspect-label">WEIGHT RANGE</div><div class="inspect-value">${f.minW} – ${f.maxW} kg</div>
+                <div class="inspect-label">SELL PRICE</div><div class="inspect-value">$${f.r}</div>
+                <div class="inspect-label">FIGHT DIFFICULTY</div><div class="inspect-value">${f.h}</div>
+                ${f.isLunar ? '<div class="inspect-label">SPECIAL</div><div class="inspect-value" style="color:#ab47bc">🌕 FULL MOON only (Ocean)</div>' : ''}
+                ${f.isTrolling ? '<div class="inspect-label">SPECIAL</div><div class="inspect-value" style="color:#2980b9">⛵ Trolling catch only</div>' : ''}
+            `;
+
+            document.getElementById("inspectDetails").innerHTML = details;
+            document.getElementById("inspectPreview").innerHTML = `<span style="font-size:44px">${f.i}</span>`;
+            document.getElementById("inspectModal").style.display = "block";
         }
 
         function drawFloatingText(text, x, y, width = 90) {
@@ -1781,10 +2118,12 @@
         }
 
         function handlePhysics(waterLevel) {
+            let isUnderwater = !inBoat && !onPirateShip && player.y > waterLevel;
             if (!player.fishing && !isFighting) {
                 let speed = inBoat ? boatsData[boatType].speed : 8;
                 if (isTrolling) speed = 6;
                 if (onPirateShip) speed = 5; // walk speed on deck
+                if (isUnderwater) speed = 4; // slower when swimming
                 if (keys['KeyD']) { player.dx = speed; player.dir = 1; }
                 else if (keys['KeyA']) { player.dx = -speed; player.dir = -1; }
                 else player.dx *= 0.8;
@@ -1804,6 +2143,8 @@
                 player.y = groundY;
                 player.dy = 0;
                 ox = Math.min(100, ox + 2);
+                bubblesCount = 10;
+                lastBubblePopTime = 0;
                 // Keep moored boat tied to the ship as it moves
                 if (mooredBoatType) {
                     let bEntry = ownedBoats.find(b => b.type === mooredBoatType);
@@ -1818,20 +2159,72 @@
                     let bData = boatsData[boatType];
                     player.y = waterLevel + bData.cockpitDepth + Math.sin(Date.now() / 250) * 4;
                     ox = Math.min(100, ox + 1);
+                    bubblesCount = 10;
+                    lastBubblePopTime = 0;
                 } else {
                     if (!onLand) {
                         player.dy += 0.5; player.y += player.dy;
-                        if (player.y > waterLevel + 30) {
-                            player.y = waterLevel + 30; player.dy = 0;
-                            ox -= 0.4; if (ox <= 0) hp -= 1;
-                        } else if (player.y > waterLevel) { player.dy *= 0.7; }
+                        let bottomY = getSeaFloorDepth(player.x);
+                        if (player.y > bottomY) {
+                            player.y = bottomY; player.dy = 0;
+                        } else if (player.y > waterLevel) {
+                            player.dy *= 0.7;
+                        }
+
+                        // Swimming up mechanic while underwater
+                        if (player.y > waterLevel) {
+                            if (keys['Space'] || keys['KeyW'] || keys['ArrowUp']) {
+                                player.dy = -4; // upward swimming force
+                            }
+
+                            // Bubble timers
+                            if (bubblesCount === 10 && lastBubblePopTime === 0) {
+                                lastBubblePopTime = Date.now();
+                            }
+                            let elapsed = Date.now() - lastBubblePopTime;
+                            if (elapsed >= 1000) {
+                                if (bubblesCount > 0) {
+                                    // Spawn bubble pop particles at popped bubble visual position
+                                    let N = bubblesCount;
+                                    let bubbleSpacing = 10;
+                                    let startX = player.x - (N - 1) * bubbleSpacing / 2;
+                                    let popX = startX + (N - 1) * bubbleSpacing;
+                                    let popY = player.y - 55;
+                                    spawnPopParticles(popX, popY);
+
+                                    bubblesCount--;
+                                    lastBubblePopTime = Date.now();
+                                }
+                            }
+                            ox = bubblesCount * 10;
+
+                            if (bubblesCount === 0) {
+                                hp = Math.max(0, hp - 0.25); // ~15 HP per second at 60 FPS
+                            }
+                        } else {
+                            bubblesCount = 10;
+                            lastBubblePopTime = 0;
+                            ox = 100;
+                        }
                     } else {
-                        player.y = groundY; player.dy = 0;
+                        // On land: apply gravity and allow jumping
+                        player.dy += 0.5;
+                        player.y += player.dy;
+                        if (player.y >= groundY) {
+                            player.y = groundY;
+                            player.dy = 0;
+                            // Jump when W or Space pressed while standing
+                            if (keys['Space'] || keys['KeyW'] || keys['ArrowUp']) {
+                                player.dy = -10;
+                            }
+                        }
                         ox = Math.min(100, ox + 2);
+                        bubblesCount = 10;
+                        lastBubblePopTime = 0;
                     }
                 }
             }
-            if (hp <= 0) { hp = 100; ox = 100; player.x = 1200; inBoat = false; boatX = 1000; onPirateShip = false; mooredBoatType = null; money = Math.floor(money * 0.8); inventory = []; isTrolling = false; fightInProgress = false; isFighting = false; updateHUD(); showMsg("YOU DROWNED! (-20% money)"); }
+            if (hp <= 0) { hp = 100; ox = 100; bubblesCount = 10; lastBubblePopTime = 0; player.x = 1200; inBoat = false; boatX = 1000; onPirateShip = false; mooredBoatType = null; money = Math.floor(money * 0.8); inventory = []; isTrolling = false; fightInProgress = false; isFighting = false; updateHUD(); showMsg("YOU DROWNED! (-20% money)"); }
 
             // Move the pirate ship very slowly, ONLY in the abyss zones
             travelingMerchant.x += travelingMerchant.dx;
@@ -1941,11 +2334,242 @@
             let camX = player.x - canvas.width / 2;
             let time = Date.now() / 1000;
 
+            // 10-min real day: 24 game hours / (600s * 60fps) ≈ 0.000667 per frame
+            gameTime += 24 / (600 * 60);
+            if (gameTime >= 24) {
+                gameTime -= 24;
+                moonPhase = (moonPhase + 1) % 8;
+            }
+
+            // Helper: lerp between two RGB triples
+            function lerpRGB(a, b, t) {
+                return [
+                    Math.round(a[0] + (b[0] - a[0]) * t),
+                    Math.round(a[1] + (b[1] - a[1]) * t),
+                    Math.round(a[2] + (b[2] - a[2]) * t)
+                ];
+            }
+            function toRGB(r) { return `rgb(${r[0]},${r[1]},${r[2]})`; }
+
+            // Sky color stops: [hour, topRGB, botRGB]
+            const skyKeys = [
+                [ 0,  [10, 10, 40],  [25, 25, 60]   ],  // midnight
+                [ 3,  [10, 10, 40],  [25, 25, 60]   ],  // late night
+                [ 4.5,[60, 30, 80],  [200, 90, 40]  ],  // pre-dawn purple
+                [ 6,  [200, 120, 60],[255, 200, 100] ],  // sunrise orange
+                [ 7,  [79, 195, 247],[225, 245, 254] ],  // clear morning
+                [17,  [79, 195, 247],[225, 245, 254] ],  // clear day
+                [18,  [230, 130, 50],[255, 180, 80]  ],  // golden hour
+                [19,  [170, 60, 30], [220, 100, 40]  ],  // dusk orange-red
+                [20,  [40, 20, 70],  [80, 30, 80]   ],  // twilight purple
+                [21,  [10, 10, 40],  [25, 25, 60]   ],  // night
+                [24,  [10, 10, 40],  [25, 25, 60]   ],  // midnight
+            ];
+
+            let gt = gameTime;
+            let topRGB = skyKeys[0][1], botRGB = skyKeys[0][2];
+            for (let ki = 0; ki < skyKeys.length - 1; ki++) {
+                let ka = skyKeys[ki], kb = skyKeys[ki + 1];
+                if (gt >= ka[0] && gt < kb[0]) {
+                    let p = (gt - ka[0]) / (kb[0] - ka[0]);
+                    p = p < 0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2; // ease in-out
+                    topRGB = lerpRGB(ka[1], kb[1], p);
+                    botRGB = lerpRGB(ka[2], kb[2], p);
+                    break;
+                }
+            }
+            let topColor = toRGB(topRGB);
+            let botColor = toRGB(botRGB);
+
             let sky = ctx.createLinearGradient(0, 0, 0, groundY);
-            sky.addColorStop(0, "#4fc3f7"); sky.addColorStop(1, "#e1f5fe");
+            sky.addColorStop(0, topColor); sky.addColorStop(1, botColor);
             ctx.fillStyle = sky; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.fillStyle = "#ffee58"; ctx.beginPath(); ctx.arc(canvas.width - 150, 100, 40, 0, Math.PI * 2); ctx.fill();
+            // Stars: fade in after 19, fade out before 5
+            let starAlpha = 0;
+            if (gameTime >= 20 || gameTime < 4) starAlpha = 0.85;
+            else if (gameTime >= 19 && gameTime < 20) starAlpha = 0.85 * (gameTime - 19);
+            else if (gameTime >= 4 && gameTime < 5) starAlpha = 0.85 * (1 - (gameTime - 4));
+            if (starAlpha > 0) {
+                ctx.fillStyle = `rgba(255,255,255,${starAlpha})`;
+                for (let i = 0; i < 120; i++) {
+                    let sx = (i * 7919 % canvas.width);
+                    let sy = (i * 6271 % (groundY - 80));
+                    let sz = 0.8 + (i % 3) * 0.6;
+                    ctx.fillRect(sx, sy, sz, sz);
+                }
+            }
+
+            // ===== SUN =====
+            if (gameTime > 4.5 && gameTime < 19.5) {
+                let sunP = (gameTime - 4.5) / 15;
+                let sunX = canvas.width * 0.1 + sunP * canvas.width * 0.8;
+                let sunY = groundY - Math.sin(sunP * Math.PI) * (groundY * 0.85);
+                let horizDist = Math.min(sunP, 1 - sunP); // 0 near horizon, 0.5 at noon
+                // Color: deep orange at horizon → bright yellow at noon
+                let sunR = 255;
+                let sunG = Math.round(140 + horizDist * 200);
+                let sunB = Math.round(horizDist < 0.08 ? 0 : horizDist * 80);
+                let sr = 42; // sun radius
+
+                ctx.save();
+
+                // Layer 1 – outer atmospheric haze (very faint, large)
+                let hazeAlpha = 0.07 + horizDist * 0.06;
+                let haze = ctx.createRadialGradient(sunX, sunY, sr, sunX, sunY, sr * 5);
+                haze.addColorStop(0, `rgba(${sunR},${sunG},${sunB},${hazeAlpha})`);
+                haze.addColorStop(1, "rgba(255,200,50,0)");
+                ctx.fillStyle = haze;
+                ctx.beginPath(); ctx.arc(sunX, sunY, sr * 5, 0, Math.PI * 2); ctx.fill();
+
+                // Layer 2 – corona glow
+                let corona = ctx.createRadialGradient(sunX, sunY, sr * 0.9, sunX, sunY, sr * 2.4);
+                corona.addColorStop(0, `rgba(${sunR},${sunG},${sunB},0.45)`);
+                corona.addColorStop(0.5, `rgba(${sunR},${Math.round(sunG * 0.8)},0,0.15)`);
+                corona.addColorStop(1, "rgba(255,140,0,0)");
+                ctx.fillStyle = corona;
+                ctx.beginPath(); ctx.arc(sunX, sunY, sr * 2.4, 0, Math.PI * 2); ctx.fill();
+
+                // Layer 3 – sun rays (8 rays, animated rotation)
+                if (horizDist > 0.05) {
+                    let rayAlpha = Math.min(1, horizDist * 5) * 0.22;
+                    ctx.globalAlpha = rayAlpha;
+                    let rayAngle = time * 0.15;
+                    for (let ri = 0; ri < 12; ri++) {
+                        let ra = rayAngle + ri * (Math.PI * 2 / 12);
+                        let inner = sr * 1.15;
+                        let outer = sr * (1.8 + (ri % 3 === 0 ? 0.6 : 0.2));
+                        let halfW = 0.05;
+                        ctx.fillStyle = `rgb(${sunR},${sunG},${sunB})`;
+                        ctx.beginPath();
+                        ctx.moveTo(sunX + Math.cos(ra - halfW) * inner, sunY + Math.sin(ra - halfW) * inner);
+                        ctx.lineTo(sunX + Math.cos(ra) * outer, sunY + Math.sin(ra) * outer);
+                        ctx.lineTo(sunX + Math.cos(ra + halfW) * inner, sunY + Math.sin(ra + halfW) * inner);
+                        ctx.closePath(); ctx.fill();
+                    }
+                    ctx.globalAlpha = 1;
+                }
+
+                // Layer 4 – sun disk with limb darkening
+                let disk = ctx.createRadialGradient(sunX - sr * 0.2, sunY - sr * 0.2, 0, sunX, sunY, sr);
+                disk.addColorStop(0,   `rgb(255,${Math.min(255, sunG + 30)},${Math.min(255, sunB + 60)})`);
+                disk.addColorStop(0.6, `rgb(${sunR},${sunG},${sunB})`);
+                disk.addColorStop(1,   `rgb(${Math.round(sunR * 0.85)},${Math.round(sunG * 0.6)},0)`);
+                ctx.fillStyle = disk;
+                ctx.beginPath(); ctx.arc(sunX, sunY, sr, 0, Math.PI * 2); ctx.fill();
+
+                ctx.restore();
+            }
+
+            // ===== MOON =====
+            if (gameTime >= 19 || gameTime < 5) {
+                let moonP = gameTime >= 19 ? (gameTime - 19) / 10 : (gameTime + 5) / 10;
+                let moonX = canvas.width * 0.9 - moonP * canvas.width * 0.8;
+                let moonY = groundY - Math.sin(moonP * Math.PI) * (groundY * 0.80);
+                let mr = 32;
+
+                ctx.save();
+
+                // Outer glow (soft blue-white halo)
+                let mHalo = ctx.createRadialGradient(moonX, moonY, mr, moonX, moonY, mr * 2.8);
+                mHalo.addColorStop(0,   "rgba(180,195,255,0.18)");
+                mHalo.addColorStop(0.5, "rgba(150,170,240,0.07)");
+                mHalo.addColorStop(1,   "rgba(100,120,220,0)");
+                ctx.fillStyle = mHalo;
+                ctx.beginPath(); ctx.arc(moonX, moonY, mr * 2.8, 0, Math.PI * 2); ctx.fill();
+
+                // Main moon disk — clip everything to this circle
+                ctx.beginPath(); ctx.arc(moonX, moonY, mr, 0, Math.PI * 2); ctx.clip();
+
+                // Base surface with subtle gradient (lit from top-left)
+                let moonBase = ctx.createRadialGradient(moonX - mr*0.3, moonY - mr*0.3, 0, moonX, moonY, mr);
+                moonBase.addColorStop(0,   "#f0f2ff");
+                moonBase.addColorStop(0.5, "#d8ddf5");
+                moonBase.addColorStop(1,   "#b0b8e8");
+                ctx.fillStyle = moonBase;
+                ctx.fillRect(moonX - mr, moonY - mr, mr * 2, mr * 2);
+
+                // Craters
+                const craters = [
+                    {cx: -0.25, cy: -0.15, r: 0.22},
+                    {cx:  0.30, cy:  0.30, r: 0.15},
+                    {cx: -0.05, cy:  0.40, r: 0.12},
+                    {cx:  0.45, cy: -0.30, r: 0.10},
+                    {cx: -0.45, cy:  0.35, r: 0.09},
+                ];
+                craters.forEach(c => {
+                    let cx = moonX + c.cx * mr;
+                    let cy = moonY + c.cy * mr;
+                    let cr = c.r * mr;
+                    let cg = ctx.createRadialGradient(cx - cr*0.3, cy - cr*0.3, 0, cx, cy, cr);
+                    cg.addColorStop(0,   "rgba(140,145,180,0.5)");
+                    cg.addColorStop(0.7, "rgba(110,115,160,0.3)");
+                    cg.addColorStop(1,   "rgba(200,205,240,0.15)");
+                    ctx.fillStyle = cg;
+                    ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI * 2); ctx.fill();
+                    // Crater rim highlight
+                    ctx.strokeStyle = "rgba(220,225,255,0.3)";
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath(); ctx.arc(cx - cr*0.15, cy - cr*0.15, cr, Math.PI*1.1, Math.PI*1.9); ctx.stroke();
+                });
+
+                // Phase shadow — use accurate bezier approach
+                // The illuminated fraction is determined by moonPhase
+                // We draw a dark overlay for the shadow part
+                // moonPhase: 0=new,1=wax crescent,2=1st qtr,3=wax gibbous,
+                //            4=full,5=wan gibbous,6=last qtr,7=wan crescent
+                if (moonPhase !== 4) { // skip shadow for full moon
+                    let shadowCol = `rgba(${topRGB[0]},${topRGB[1]},${topRGB[2]},0.93)`;
+                    ctx.fillStyle = shadowCol;
+
+                    if (moonPhase === 0) {
+                        // New moon: fill all
+                        ctx.fillRect(moonX - mr, moonY - mr, mr * 2, mr * 2);
+                    } else {
+                        // For all other phases we composite a shadow:
+                        // The shadow is always one half-circle + an ellipse on the lit side.
+                        // phaseFraction: 0=new, 0.5=quarter, 1=full
+                        // For waxing (0→4): shadow covers left side
+                        // For waning (4→8): shadow covers right side
+                        let waxing = moonPhase < 4;
+                        // ellipse X-radius for terminator (negative = bulges into lit half)
+                        // phase 1→ crescent (terminator bulges a lot), phase 3 → gibbous (barely)
+                        let phaseAngle = (moonPhase / 4) * Math.PI; // 0→π over waxing half
+                        let terminatorX = Math.cos(phaseAngle) * mr; // positive=shadow side, negative=lit side
+
+                        ctx.save();
+                        ctx.beginPath();
+                        // Left/right semicircle for the shadow side
+                        if (waxing) {
+                            // shadow on left side
+                            ctx.arc(moonX, moonY, mr, Math.PI/2, -Math.PI/2, false); // right semicircle (lit)
+                            // terminator ellipse
+                            ctx.ellipse(moonX, moonY, Math.abs(terminatorX), mr, 0,
+                                -Math.PI/2, Math.PI/2, terminatorX < 0);
+                        } else {
+                            // shadow on right side
+                            ctx.arc(moonX, moonY, mr, -Math.PI/2, Math.PI/2, false); // left semicircle (lit)
+                            let mirrorP = 8 - moonPhase;
+                            let mPA = (mirrorP / 4) * Math.PI;
+                            let tX = Math.cos(mPA) * mr;
+                            ctx.ellipse(moonX, moonY, Math.abs(tX), mr, 0,
+                                Math.PI/2, -Math.PI/2, tX < 0);
+                        }
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+
+                // Subtle surface shine highlight
+                let shine = ctx.createRadialGradient(moonX - mr*0.35, moonY - mr*0.35, 0, moonX - mr*0.2, moonY - mr*0.2, mr*0.7);
+                shine.addColorStop(0, "rgba(255,255,255,0.18)");
+                shine.addColorStop(1, "rgba(255,255,255,0)");
+                ctx.fillStyle = shine;
+                ctx.fillRect(moonX - mr, moonY - mr, mr * 2, mr * 2);
+
+                ctx.restore();
+            }
 
             ctx.fillStyle = "rgba(255,255,255,0.8)";
             clouds.forEach(c => {
@@ -1953,7 +2577,11 @@
                 ctx.beginPath(); ctx.arc(cx, c.y, 30, 0, Math.PI * 2); ctx.arc(cx + 25, c.y - 10, 35, 0, Math.PI * 2); ctx.arc(cx + 50, c.y, 25, 0, Math.PI * 2); ctx.fill();
             });
 
-            ctx.save(); ctx.translate(-camX, 0);
+            let camY = 0;
+            if (player.y > groundY) {
+                camY = player.y - groundY;
+            }
+            ctx.save(); ctx.translate(-camX, -camY);
 
             // Kreslení ostrovů (Vylepšená grafika ledu)
             islands.forEach(isl => {
@@ -2371,9 +2999,9 @@
                 });
             }
 
-            let water = ctx.createLinearGradient(0, waterLevel, 0, canvas.height);
+            let water = ctx.createLinearGradient(0, waterLevel, 0, waterLevel + 2000);
             water.addColorStop(0, "rgba(2, 119, 189, 0.8)"); water.addColorStop(1, "rgba(1, 87, 155, 0.95)");
-            ctx.fillStyle = water; ctx.fillRect(camX, waterLevel, canvas.width, 1000);
+            ctx.fillStyle = water; ctx.fillRect(camX, waterLevel, canvas.width, 5000);
 
             ctx.fillStyle = "rgba(255,255,255,0.2)";
             for (let i = 0; i < 20; i++) {
@@ -2411,10 +3039,10 @@
 
                 ctx.fillStyle = fillCol;
                 ctx.beginPath();
-                ctx.moveTo(x - 1, canvas.height + 500);
+                ctx.moveTo(x - 1, groundY + 3000);
                 ctx.lineTo(x - 1, sfDepth1);
                 ctx.lineTo(x2 + 1, sfDepth2);
-                ctx.lineTo(x2 + 1, canvas.height + 500);
+                ctx.lineTo(x2 + 1, groundY + 3000);
                 ctx.fill();
 
                 ctx.strokeStyle = "rgba(0,0,0,0.15)";
@@ -2543,6 +3171,48 @@
                 ctx.restore();
             }
 
+            // Draw bubbles above player's head if underwater
+            if (player.y > waterLevel && bubblesCount > 0) {
+                let N = bubblesCount;
+                let bubbleSpacing = 10;
+                let startX = px - (N - 1) * bubbleSpacing / 2;
+                for (let i = 0; i < N; i++) {
+                    let bx = startX + i * bubbleSpacing;
+                    let by = py - 55 + Math.sin(time * 5 + i) * 2;
+
+                    // Shiny bubble styling matching var(--ox) color stop
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+                    ctx.lineWidth = 1.5;
+                    ctx.fillStyle = "rgba(0, 210, 255, 0.35)";
+                    ctx.beginPath();
+                    ctx.arc(bx, by, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    // Bubble highlight
+                    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+                    ctx.beginPath();
+                    ctx.arc(bx - 1.2, by - 1.2, 1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Update and draw bubble pop particles
+            for (let i = bubbleParticles.length - 1; i >= 0; i--) {
+                let p = bubbleParticles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+                if (p.life <= 0) {
+                    bubbleParticles.splice(i, 1);
+                } else {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
             // Kreslení lodí (Foreground sekce - Trupu zakryje spodní část hráče)
             if (hasBoat) {
                 ownedBoats.forEach(b => {
@@ -2624,7 +3294,8 @@
                 currentBaitId, ownedBaitIds,
                 hasBackpack, invCapacity,
                 x: player.x, dx: player.dx, dy: player.dy, dir: player.dir,
-                merchantX: travelingMerchant.x, merchantDx: travelingMerchant.dx
+                merchantX: travelingMerchant.x, merchantDx: travelingMerchant.dx,
+                gameTime, moonPhase
             };
             localStorage.setItem("fisherman_beta_save", JSON.stringify(data));
         }
@@ -2636,7 +3307,7 @@
                     const d = JSON.parse(saved);
                     if (d.money !== undefined) money = d.money;
                     if (d.hp !== undefined) hp = d.hp;
-                    if (d.ox !== undefined) ox = d.ox;
+                    if (d.ox !== undefined) { ox = d.ox; bubblesCount = Math.floor(ox / 10); }
                     if (d.hasBoat !== undefined) hasBoat = d.hasBoat;
                     if (d.inBoat !== undefined) inBoat = d.inBoat;
                     if (d.boatX !== undefined) boatX = d.boatX;
@@ -2660,6 +3331,8 @@
                     if (d.dir !== undefined) player.dir = d.dir;
                     if (d.merchantX !== undefined) travelingMerchant.x = d.merchantX;
                     if (d.merchantDx !== undefined) travelingMerchant.dx = d.merchantDx;
+                    if (d.gameTime !== undefined) gameTime = d.gameTime;
+                    if (d.moonPhase !== undefined) moonPhase = d.moonPhase;
                 } catch (e) { console.error("Save corrupted", e); }
             }
         }
