@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>fish beta game v1.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -475,6 +477,9 @@
 <body>
 
     <div id="msg"></div>
+    <div id="interact-prompt" style="display: none; position: fixed; bottom: 20%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border: 4px solid #fff; text-align: center; font-size: 10px; pointer-events: none; box-shadow: 4px 4px 0 #000; z-index: 800;">
+        PRESS [ENTER] TO OPEN <span id="prompt-name" style="color: #f1c40f;">SHOP</span>
+    </div>
 
     <div id="ui">
         <div class="panel">
@@ -549,12 +554,15 @@
             style="color:#2c3e50; font-size:12px; text-align:center; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px;">
             GAME CONTROLS</h2>
         <div style="font-size: 8px; line-height: 2.2; margin-top: 15px; color: #333; padding: 0 40px;">
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[A] / [D]</b> <span>Move or Drive Boat</span></div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[W,A,S,D]</b> <span>Move</span></div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[MOUSE]</b> <span>Look around (ESC to UI)</span></div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[F]</b> <span>Cast Line / Fish</span></div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[B]</b> <span>Gear Shop</span></div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[V]</b> <span>Bait Shop</span></div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[M]</b> <span>Fish Market</span></div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[U]</b> <span>Upgrades</span></div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[E]</b> <span>Board / Exit Boat</span></div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[T]</b> <span>Toggle Trolling (In Boat)</span></div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[ENTER]</b> <span>Interact / Shops</span></div>
-            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[UP]/[DOWN]</b> <span>Change Gear In UI</span></div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>[SPACE]</b> <span>Jump</span></div>
             <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #ccc;"><b>MOUSE CLICK</b> <span>Reel In (Hit!) & UI</span></div>
         </div>
         <div style="display: flex; gap: 10px; margin-top:20px;">
@@ -610,17 +618,14 @@
             [ESC]</button>
     </div>
 
-    <div id="hit-btn" onmousedown="handleHit()">HIT!</div>!</div>
+    <div id="hit-btn" onmousedown="handleHit()">HIT!</div>
     <canvas id="game"></canvas>
 
     <script>
         const canvas = document.getElementById("game");
-        const ctx = canvas.getContext("2d");
-        function res() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.onresize = res; res();
-
-        let money = 200, hp = 100, ox = 100, hasBoat = false, inBoat = false, boatX = 1000;
-        // ownedBoats: array of {type, x} for every boat the player owns
+        
+        // --- GAME STATE (Moved to top to prevent ReferenceErrors) ---
+        let money = 200, hp = 100, ox = 100, hasBoat = false, inBoat = false, boatX = 300;
         let ownedBoats = [];
         let travelingMerchant = {
             x: -11000, dx: 0.4, dir: 1, items: [
@@ -628,11 +633,512 @@
                 { n: "Abyssal Lure", p: 100000, id: "abyssal_lure" }
             ]
         };
-        // Pirate ship boarding state
-        let onPirateShip = false;       // true while player is on the pirate ship deck
-        let mooredBoatType = null;      // the boat type that got tied to the pirate ship
-        let mooredBoatOffset = 0;       // sideway offset where boat is moored
+        let onPirateShip = false;
+        let mooredBoatType = null;
+        let mooredBoatOffset = 0;
         let inventory = [];
+
+        // THREE.JS SETUP
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Sky blue
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 20000);
+        camera.position.set(0, 30, 0); // Spawn on the island (centered at 0 in 3D, height 30)
+        
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        function res() { 
+            renderer.setSize(window.innerWidth, window.innerHeight); 
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        }
+        window.onresize = res; res();
+
+        const controls = new THREE.PointerLockControls(camera, document.body);
+        
+        // Add a button or instruction to lock cursor
+        const lockBtn = document.createElement("div");
+        lockBtn.innerHTML = "CLICK TO PLAY<br><span style='font-size:10px'>[ESC] to unlock cursor / open UI</span>";
+        lockBtn.style.cssText = "position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.7);color:white;padding:20px;text-align:center;cursor:pointer;z-index:9000;border:2px solid white;font-family:'Press Start 2P';";
+        document.body.appendChild(lockBtn);
+
+        lockBtn.addEventListener('click', () => {
+            controls.lock();
+            lockBtn.remove();
+        });
+
+        controls.addEventListener('lock', () => {
+            document.getElementById('ui').style.pointerEvents = 'none';
+        });
+        controls.addEventListener('unlock', () => {
+            document.getElementById('ui').style.pointerEvents = 'auto';
+        });
+
+        // Allow right-click dragging to move camera when unlocked
+        let isDragging = false;
+        let prevMouseX = 0;
+        let prevMouseY = 0;
+        
+        document.addEventListener('mousedown', (e) => {
+            if (!controls.isLocked && e.button === 2) {
+                isDragging = true;
+                prevMouseX = e.clientX;
+                prevMouseY = e.clientY;
+            }
+        });
+        document.addEventListener('mouseup', (e) => {
+            if (e.button === 2) isDragging = false;
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && !controls.isLocked) {
+                const movementX = e.clientX - prevMouseX;
+                const movementY = e.clientY - prevMouseY;
+                prevMouseX = e.clientX;
+                prevMouseY = e.clientY;
+                
+                const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+                euler.setFromQuaternion(camera.quaternion);
+                
+                euler.y -= movementX * 0.002;
+                euler.x -= movementY * 0.002;
+                euler.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, euler.x));
+                
+                camera.quaternion.setFromEuler(euler);
+            }
+        });
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Add Light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        dirLight.position.set(100, 200, 50);
+        scene.add(dirLight);
+
+        // Add Ocean
+        const oceanGeo = new THREE.PlaneGeometry(30000, 30000);
+        const oceanMat = new THREE.MeshPhongMaterial({ color: 0x0277bd, side: THREE.DoubleSide });
+        const oceanMesh = new THREE.Mesh(oceanGeo, oceanMat);
+        oceanMesh.rotation.x = -Math.PI / 2;
+        scene.add(oceanMesh);
+
+        // Add 3D representation of the main "Coast" island
+        const islandGroup = new THREE.Group();
+        islandGroup.position.set(0, 2, 0);
+
+        // Beach base
+        const beachGeo = new THREE.BoxGeometry(600, 4, 600);
+        const beachMat = new THREE.MeshPhongMaterial({ color: 0xf4a460 });
+        const beachMesh = new THREE.Mesh(beachGeo, beachMat);
+        beachMesh.position.y = -1;
+        islandGroup.add(beachMesh);
+
+        const islandGeo = new THREE.BoxGeometry(500, 5, 500);
+        const islandMat = new THREE.MeshPhongMaterial({ color: 0x81c784 });
+        const islandMesh = new THREE.Mesh(islandGeo, islandMat);
+        islandGroup.add(islandMesh);
+
+        // Add some trees
+        for (let i = 0; i < 15; i++) {
+            let tx = (Math.random() - 0.5) * 450;
+            let tz = (Math.random() - 0.5) * 450;
+            // Prevent trees from spawning exactly where the player spawns or in shops
+            if (Math.abs(tx) < 40 && Math.abs(tz) < 40) { i--; continue; }
+            if (Math.abs(tx - (-150)) < 80 && Math.abs(tz - 0) < 80) { i--; continue; } // Gear shop area
+            if (Math.abs(tx - 150) < 80 && Math.abs(tz - 50) < 80) { i--; continue; } // Market shop area
+
+            const trunkGeo = new THREE.CylinderGeometry(5, 5, 40);
+            const trunkMat = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.set(tx, 20, tz);
+            
+            const leavesGeo = new THREE.ConeGeometry(25, 60);
+            const leavesMat = new THREE.MeshPhongMaterial({ color: 0x2e7d32 });
+            const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+            leaves.position.set(0, 30, 0);
+            
+            trunk.add(leaves);
+            islandGroup.add(trunk);
+        }
+
+        // Add some environmental details
+        // Rocks on the base for "unfinished" texture
+        for (let i = 0; i < 40; i++) {
+            const rx = (Math.random() - 0.5) * 520;
+            const rz = (Math.random() - 0.5) * 520;
+            const rSize = 5 + Math.random() * 15;
+            const rMesh = new THREE.Mesh(new THREE.BoxGeometry(rSize, 6, rSize), new THREE.MeshPhongMaterial({ color: 0x546e7a }));
+            rMesh.position.set(rx, -1, rz);
+            islandGroup.add(rMesh);
+        }
+
+        // Wooden Piers (Paths)
+        function createPier(x, z, width, depth) {
+            const pGroup = new THREE.Group();
+            const plankCount = Math.floor(depth / 6);
+            for (let i = 0; i < plankCount; i++) {
+                const plank = new THREE.Mesh(new THREE.BoxGeometry(width, 2, 5), new THREE.MeshPhongMaterial({ color: i % 2 === 0 ? 0x5d4037 : 0x3e2723 }));
+                plank.position.set(0, 3, -depth/2 + i * 6);
+                pGroup.add(plank);
+            }
+            // Posts
+            const postGeo = new THREE.BoxGeometry(4, 15, 4);
+            const postMat = new THREE.MeshPhongMaterial({ color: 0x3e2723 });
+            for (let i = 0; i < 2; i++) {
+                for (let j = 0; j < 2; j++) {
+                    const post = new THREE.Mesh(postGeo, postMat);
+                    post.position.set(i === 0 ? -width/2 : width/2, 5, j === 0 ? -depth/2 : depth/2);
+                    pGroup.add(post);
+                    // Rope between posts (simple horizontal beam)
+                    if (j === 0) {
+                        const rope = new THREE.Mesh(new THREE.BoxGeometry(2, 2, depth), new THREE.MeshPhongMaterial({ color: 0x795548 }));
+                        rope.position.set(i === 0 ? -width/2 : width/2, 10, 0);
+                        pGroup.add(rope);
+                    }
+                }
+            }
+            pGroup.position.set(x, 0, z);
+            return pGroup;
+        }
+
+        // Add piers leading from shops to water
+        islandGroup.add(createPier(-150, 40, 40, 60)); // Near gear shop
+        islandGroup.add(createPier(150, 90, 40, 60));  // Near market
+
+        // Environmental rocks
+        for (let i = 0; i < 20; i++) {
+            const rx = (Math.random() - 0.5) * 550;
+            const rz = (Math.random() - 0.5) * 550;
+            const size = 3 + Math.random() * 8;
+            const rockGeo = new THREE.DodecahedronGeometry(size, 0);
+            const rockMat = new THREE.MeshPhongMaterial({ color: 0x757575 });
+            const rock = new THREE.Mesh(rockGeo, rockMat);
+            rock.position.set(rx, size/2, rz);
+            rock.rotation.set(Math.random(), Math.random(), Math.random());
+            islandGroup.add(rock);
+        }
+
+        // Flowers
+        const flowerColors = [0xff5252, 0xffeb3b, 0xe040fb, 0x18ffff];
+        for (let i = 0; i < 40; i++) {
+            const fx = (Math.random() - 0.5) * 480;
+            const fz = (Math.random() - 0.5) * 480;
+            const flowerGeo = new THREE.SphereGeometry(1.5, 4, 4);
+            const flowerMat = new THREE.MeshPhongMaterial({ color: flowerColors[Math.floor(Math.random() * flowerColors.length)] });
+            const flower = new THREE.Mesh(flowerGeo, flowerMat);
+            flower.position.set(fx, 3, fz);
+            islandGroup.add(flower);
+            
+            const stemGeo = new THREE.BoxGeometry(0.5, 3, 0.5);
+            const stemMat = new THREE.MeshPhongMaterial({ color: 0x388e3c });
+            const stem = new THREE.Mesh(stemGeo, stemMat);
+            stem.position.set(fx, 1.5, fz);
+            islandGroup.add(stem);
+        }
+
+        // Grass patches
+        for (let i = 0; i < 30; i++) {
+            const gx = (Math.random() - 0.5) * 480;
+            const gz = (Math.random() - 0.5) * 480;
+            const grassGeo = new THREE.BoxGeometry(4, 2, 4);
+            const grassMat = new THREE.MeshPhongMaterial({ color: 0x4caf50 });
+            const grass = new THREE.Mesh(grassGeo, grassMat);
+            grass.position.set(gx, 2.5, gz);
+            grass.rotation.y = Math.random() * Math.PI;
+            islandGroup.add(grass);
+        }
+
+        // Shopkeeper generator function
+        function createShopkeeper(colorBody, colorFace) {
+            const group = new THREE.Group();
+            
+            const bodyGeo = new THREE.BoxGeometry(10, 15, 10);
+            const bodyMat = new THREE.MeshPhongMaterial({ color: colorBody });
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            body.position.y = 10;
+            group.add(body);
+            
+            const headGeo = new THREE.BoxGeometry(8, 8, 8);
+            const headMat = new THREE.MeshPhongMaterial({ color: colorFace });
+            const head = new THREE.Mesh(headGeo, headMat);
+            head.position.y = 21.5;
+            group.add(head);
+            
+            const eyeGeo = new THREE.BoxGeometry(2, 2, 2);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeL.position.set(-2, 22, 4);
+            const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeR.position.set(2, 22, 4);
+            group.add(eyeL);
+            group.add(eyeR);
+
+            // Arms
+            const armGeo = new THREE.BoxGeometry(3, 10, 3);
+            const armL = new THREE.Mesh(armGeo, bodyMat);
+            armL.position.set(-6.5, 12, 0);
+            armL.rotation.z = 0.2;
+            group.add(armL);
+            const armR = new THREE.Mesh(armGeo, bodyMat);
+            armR.position.set(6.5, 12, 0);
+            armR.rotation.z = -0.2;
+            group.add(armR);
+
+            // Hat (Professional look)
+            const hatBaseGeo = new THREE.BoxGeometry(12, 2, 12);
+            const hatBase = new THREE.Mesh(hatBaseGeo, new THREE.MeshPhongMaterial({ color: 0x333333 }));
+            hatBase.position.y = 25.5;
+            group.add(hatBase);
+            const hatTopGeo = new THREE.BoxGeometry(7, 5, 7);
+            const hatTop = new THREE.Mesh(hatTopGeo, new THREE.MeshPhongMaterial({ color: 0x333333 }));
+            hatTop.position.y = 28.5;
+            group.add(hatTop);
+            
+            return group;
+        }
+
+        // Cabin generator function (Detailed & Finished)
+        function createCabin(color, keeperBody, keeperFace, signText) {
+            const group = new THREE.Group();
+            const mat = new THREE.MeshPhongMaterial({ color: color });
+            const woodMat = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
+            const darkWoodMat = new THREE.MeshPhongMaterial({ color: 0x3e2723 });
+            
+            // Sizes: Width 50, Height 65, Depth 50
+            const w = 50, h = 65, d = 50;
+            const hw = w/2, hh = h/2, hd = d/2;
+
+            // --- FLOOR (Detailed Planks) ---
+            for (let i = 0; i < 10; i++) {
+                const pW = w / 10;
+                const pMesh = new THREE.Mesh(new THREE.BoxGeometry(pW - 0.5, 2, d), i % 2 === 0 ? woodMat : darkWoodMat);
+                pMesh.position.set(-hw + pW/2 + i * pW, 1, 0);
+                group.add(pMesh);
+            }
+
+            // --- WALLS (With horizontal planks and vertical beams) ---
+            function createDetailedWall(width, height) {
+                var wallGroup = new THREE.Group();
+                // Base
+                var base = new THREE.Mesh(new THREE.BoxGeometry(width, height, 2), mat);
+                wallGroup.add(base);
+                // Horizontal planks
+                var plankCount = 6;
+                var plankH = height / plankCount;
+                if (plankH > 2) {
+                    for (var i = 0; i < plankCount; i++) {
+                        var p = new THREE.Mesh(new THREE.BoxGeometry(width + 1, plankH - 1, 1.1), darkWoodMat);
+                        p.position.set(0, -height/2 + plankH/2 + i * plankH, 1.1);
+                        wallGroup.add(p);
+                    }
+                }
+                // Vertical beams
+                for (var j = -1; j <= 1; j++) {
+                    var beam = new THREE.Mesh(new THREE.BoxGeometry(4, height + 2, 3), woodMat);
+                    beam.position.set(j * (width/2 - 2), 0, 1.5);
+                    wallGroup.add(beam);
+                }
+                return wallGroup;
+            }
+
+            var backWall = createDetailedWall(w, h);
+            backWall.position.set(0, hh, -hd);
+            group.add(backWall);
+
+            var leftWall = createDetailedWall(d, h);
+            leftWall.rotation.y = Math.PI / 2;
+            leftWall.position.set(-hw, hh, 0);
+            group.add(leftWall);
+
+            var rightWall = createDetailedWall(d, h);
+            rightWall.rotation.y = -Math.PI / 2;
+            rightWall.position.set(hw, hh, 0);
+            group.add(rightWall);
+
+            // Front walls
+            var fLow = new THREE.Mesh(new THREE.BoxGeometry(w, 14, 4), mat);
+            fLow.position.set(0, 7, hd);
+            group.add(fLow);
+            var fHigh = new THREE.Mesh(new THREE.BoxGeometry(w, 15, 4), mat);
+            fHigh.position.set(0, h - 7.5, hd);
+            group.add(fHigh);
+
+            // --- DECORATIONS (Rods, Fish, Crates) ---
+            // Rods
+            var rodColors = [0x5d4037, 0x95a5a6, 0xf1c40f];
+            for (var k = 0; k < 3; k++) {
+                var rG = new THREE.Group();
+                var rP = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.6, 45), new THREE.MeshPhongMaterial({ color: rodColors[k] }));
+                rP.position.y = 22.5;
+                rG.add(rP);
+                var rH = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 8), darkWoodMat);
+                rG.add(rH);
+                rG.position.set(-hw + 8 + k * 4, 3, -hd + 8);
+                rG.rotation.x = -0.2; rG.rotation.z = 0.1;
+                group.add(rG);
+            }
+
+            // Hanging fish
+            var fCols = [0x3498db, 0xe74c3c, 0xf1c40f];
+            for (var m = 0; m < 3; m++) {
+                var fG = new THREE.Group();
+                var fB = new THREE.Mesh(new THREE.SphereGeometry(2, 8, 8), new THREE.MeshPhongMaterial({ color: fCols[m] }));
+                fB.scale.set(1, 0.6, 0.6);
+                fB.rotation.z = Math.PI/2;
+                var fT = new THREE.Mesh(new THREE.ConeGeometry(2, 3, 4), new THREE.MeshPhongMaterial({ color: fCols[m] }));
+                fT.position.x = -4; fT.rotation.z = Math.PI/2;
+                fG.add(fB); fG.add(fT);
+                fG.position.set(hw - 10 - m * 10, h - 15, -hd + 4);
+                fG.rotation.z = -0.1;
+                group.add(fG);
+            }
+
+            // Crates and Barrels in the corner
+            var crate = new THREE.Mesh(new THREE.BoxGeometry(8, 8, 8), woodMat);
+            crate.position.set(hw - 10, 5, -hd + 10);
+            group.add(crate);
+            var barrel = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 10, 8), darkWoodMat);
+            barrel.position.set(hw - 12, 6, -hd + 20);
+            group.add(barrel);
+
+            // --- EXTERIOR ---
+            var counterH = 22;
+            var desk = new THREE.Mesh(new THREE.BoxGeometry(w - 10, counterH, 10), woodMat);
+            desk.position.set(0, counterH/2, 15);
+            group.add(desk);
+            var counterTop = new THREE.Mesh(new THREE.BoxGeometry(w - 6, 3, 16), darkWoodMat);
+            counterTop.position.set(0, counterH + 1.5, 15);
+            group.add(counterTop);
+
+            var winMat = new THREE.MeshPhongMaterial({ color: 0x81d4fa, transparent: true, opacity: 0.6 });
+            var wL = new THREE.Mesh(new THREE.BoxGeometry(2.1, 22, 18), winMat);
+            wL.position.set(-hw, h*0.6, 0); group.add(wL);
+            var wR = new THREE.Mesh(new THREE.BoxGeometry(2.1, 22, 18), winMat);
+            wR.position.set(hw, h*0.6, 0); group.add(wR);
+
+            var roof = new THREE.Mesh(new THREE.BoxGeometry(w + 12, 4, d + 12), darkWoodMat);
+            roof.position.set(0, h + 2, 0); roof.rotation.x = 0.05;
+            group.add(roof);
+
+            if (signText) {
+                var sB = new THREE.Mesh(new THREE.BoxGeometry(32, 14, 2), darkWoodMat);
+                sB.position.set(0, h + 10, hd + 2); group.add(sB);
+                var sP = new THREE.Mesh(new THREE.PlaneGeometry(28, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                sP.position.set(0, h + 10, hd + 3.1); group.add(sP);
+            }
+
+            var keeper = createShopkeeper(keeperBody, keeperFace);
+            keeper.position.set(0, 0, -5); keeper.scale.set(1.1, 1.1, 1.1);
+            group.add(keeper);
+
+            // --- PORCH (Deck) ---
+            var porchGeo = new THREE.BoxGeometry(w + 10, 2, 20);
+            var porch = new THREE.Mesh(porchGeo, woodMat);
+            porch.position.set(0, 1, hd + 10); // In front of the cabin floor (hd=25, so z=35)
+            group.add(porch);
+            
+            // Porch railings
+            for (let side = -1; side <= 1; side += 2) {
+                let railPost = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 2), darkWoodMat);
+                railPost.position.set(side * (hw + 3), 5, hd + 18);
+                group.add(railPost);
+                
+                let railPost2 = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 2), darkWoodMat);
+                railPost2.position.set(side * (hw + 3), 5, hd + 2);
+                group.add(railPost2);
+                
+                let topRail = new THREE.Mesh(new THREE.BoxGeometry(2, 2, 20), darkWoodMat);
+                topRail.position.set(side * (hw + 3), 10, hd + 10);
+                group.add(topRail);
+            }
+
+            return group;
+        }
+
+        // --- PIRATE SHIP (3D Model) ---
+        function createPirateShip() {
+            var ship = new THREE.Group();
+            var hullMat = new THREE.MeshPhongMaterial({ color: 0x3e2723 });
+            var deckMat = new THREE.MeshPhongMaterial({ color: 0x5d4037 });
+            
+            // Hull
+            var hull = new THREE.Mesh(new THREE.BoxGeometry(240, 60, 100), hullMat);
+            hull.position.y = 30; ship.add(hull);
+            
+            // Deck
+            var deck = new THREE.Mesh(new THREE.BoxGeometry(230, 5, 90), deckMat);
+            deck.position.y = 62; ship.add(deck);
+            
+            // Masts
+            var mastMat = new THREE.MeshPhongMaterial({ color: 0x212121 });
+            var mast1 = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 250), mastMat);
+            mast1.position.set(-60, 180, 0); ship.add(mast1);
+            var mast2 = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 300), mastMat);
+            mast2.position.set(20, 210, 0); ship.add(mast2);
+            
+            // Sails
+            var sailMat = new THREE.MeshPhongMaterial({ color: 0xf5f5f5, side: THREE.DoubleSide });
+            var sail1 = new THREE.Mesh(new THREE.PlaneGeometry(80, 150), sailMat);
+            sail1.position.set(-60, 180, 40); sail1.rotation.y = 0.1; ship.add(sail1);
+            var sail2 = new THREE.Mesh(new THREE.PlaneGeometry(100, 200), sailMat);
+            sail2.position.set(20, 210, 45); sail2.rotation.y = 0.15; ship.add(sail2);
+            
+            // Merchant NPC
+            var merchant = createShopkeeper(0x212121, 0xffccbc);
+            merchant.position.set(80, 65, 0); merchant.scale.set(1.5, 1.5, 1.5);
+            ship.add(merchant);
+            
+            return ship;
+        }
+
+        // Add detailed shops
+        var gearCabin = createCabin(0x8d6e63, 0xf39c12, 0xe67e22, "GEAR");
+        gearCabin.position.set(-150, 0, 0);
+        islandGroup.add(gearCabin);
+
+        var marketCabin = createCabin(0x5c6bc0, 0x3498db, 0xf1c40f, "FISH");
+        marketCabin.position.set(150, 0, 50);
+        islandGroup.add(marketCabin);
+
+        // Add 3D Pirate Ship
+        var pirateShip3D = createPirateShip();
+        window.pirateShip3D = pirateShip3D;
+        pirateShip3D.position.set(travelingMerchant.x, -5, 1000); // Out in the ocean
+        scene.add(pirateShip3D);
+
+        scene.add(islandGroup);
+
+        // Build colliders array
+        var colliders = [];
+        islandGroup.updateMatrixWorld();
+        islandGroup.children.forEach(function(child) {
+            if (!child) return;
+            // Only add colliders for actual buildings or trunks
+            // Groups like cabins and piers
+            if (child.isGroup) {
+                var box = new THREE.Box3().setFromObject(child);
+                box.expandByScalar(-2);
+                colliders.push(box);
+                return;
+            }
+            
+            // Trees (trunks)
+            if (child.geometry && child.geometry.type === 'CylinderGeometry') {
+                var trunkBox = new THREE.Box3();
+                trunkBox.setFromCenterAndSize(
+                    new THREE.Vector3().setFromMatrixPosition(child.matrixWorld),
+                    new THREE.Vector3(8, 60, 8) 
+                );
+                colliders.push(trunkBox);
+                return;
+            }
+
+            // Skip everything else (grass, flowers, small rocks) for performance and stability
+        });
+
+
+
         let caughtFishIds = new Set();
         let keys = {}, isFighting = false, hitsLeft = 0, currentFish = null;
         let fightInProgress = false;
@@ -721,51 +1227,11 @@
         // OSTROVY (Vylepšená grafika ledu)
         const islands = [
             {
-                x: -15000, w: 1500, name: "Jungle Kingdom", colorTop: "#4caf50", colorBot: "#3e2723", shopPos: -14200, baitShopPos: -14800, shopType: "bamboo", hasTrees: true, hasLighthouse: false, treeOffsets: [50, 150, 250, 350, 450, 550, 650, 750, 850, 950, 1100, 1200, 1300, 1400], jungleTrees: true, items: [
-                    { n: "Vine Rod", p: 12000, id: "vine" }, { n: "Hardened Bamboo", p: 3500, id: "bamboo_pro" }, { n: "Backpack", p: 5000, type: "backpack" }
-                ],
-                baitItems: [
-                    { n: "Tropical Fruit", p: 1500, id: "tropical_fruit" }, { n: "Bread", p: 100, id: "chleba" }, { n: "Worm", p: 300, id: "zizala" }
-                ]
-            },
-            {
-                x: -9000, w: 1500, name: "Ice Kingdom", colorTop: "#ffffff", colorBot: "#4dd0e1", shopPos: -8500, iglooPos: -7800, shopType: "stone", hasLighthouse: false, treeOffsets: [], items: [
-                    { n: "Soup (HP)", p: 250, heal: 100 }, { n: "Medkit", p: 100, heal: 50 }
-                ]
-            },
-            {
-                x: -3500, w: 1000, name: "Western Cliffs", colorTop: "#78909c", colorBot: "#455a64", shopPos: -3000, shopType: "stone", hasLighthouse: true, treeOffsets: [], items: [
-                    { n: "Carbon R.", p: 400, id: "karbon" }, { n: "Titanium R.", p: 900, id: "titan" }, { n: "Medkit", p: 100, heal: 50 }
-                ]
-            },
-            {
-                x: 500, w: 1200, name: "Coast", colorTop: "#81c784", colorBot: "#5d4037", shopPos: 800, marketPos: 1300, shopType: "wood", hasTrees: true,
+                x: -250, w: 500, name: "Coast", colorTop: "#81c784", colorBot: "#5d4037", shopPos: -150, marketPos: 150, shopType: "wood", hasTrees: true,
                 treeOffsets: [200, 350, 600, 750, 1000],
                 items: [
                     { n: "Motorboat", p: boatsData.motorovka.p, getBoat: "motorovka" }, { n: "Pro Yacht", p: boatsData.jachta.p, getBoat: "jachta" },
                     { n: "Bamboo R.", p: 150, id: "bambus" }, { n: "Fiberglass R.", p: 280, id: "laminat" }
-                ]
-            },
-            {
-                x: 6000, w: 1400, name: "Tropics", colorTop: "#fff59d", colorBot: "#d7ccc8", shopPos: 6900, baitShopPos: 6400, shopType: "bamboo", hasLighthouse: true, hasTrees: true,
-                treeOffsets: [150, 300, 450, 1000, 1150],
-                items: [
-                    { n: "Neon R.", p: 2500, id: "neon" }, { n: "Sapphire R.", p: 4500, id: "safir" },
-                    { n: "Golden Rod", p: 8000, id: "zlaty" }, { n: "Renforced titanium neon", p: 20000, id: "temny" }
-                ],
-                baitItems: [
-                    { n: "Bread", p: 100, id: "chleba" }, { n: "Worm", p: 300, id: "zizala" },
-                    { n: "Dough", p: 800, id: "testo" }, { n: "Artificial fly", p: 1200, id: "moucha" },
-                    { n: "Spinner", p: 2000, id: "trpytka" }, { n: "Pro Wobbler", p: 5000, id: "wobler" },
-                    { n: "Squid", p: 9000, id: "chobotnice" }
-                ]
-            },
-            {
-                x: 11000, w: 1200, name: "Abyssal Rock", colorTop: "#7f8c8d", colorBot: "#2c3e50", upgradePos: 11800, shopPos: 11400, baitShopPos: 11100, shopType: "stone", hasLighthouse: true, treeOffsets: [], items: [
-                    { n: "Dark matter R.", p: 20000, id: "temny" }, { n: "Diamond Lure", p: 50000, id: "diamant" }
-                ],
-                baitItems: [
-                    { n: "Squid", p: 9000, id: "chobotnice" }, { n: "Diamond Lure", p: 50000, id: "diamant" }
                 ]
             }
         ];
@@ -813,7 +1279,7 @@
             { id: 38, n: "Rainbow Betta", rarity: 2, r: 2500, h: 40, z: "Ocean", minW: 0.1, maxW: 0.5, i: "🌈", reqBait: "tropical_fruit" }
         ];
 
-        let player = { x: 1200, y: groundY, dx: 0, dy: 0, dir: 1, fishing: false };
+        let player = { x: 1200, y: groundY, z: 0, dx: 0, dy: 0, dir: 1, fishing: false };
 
 
         function openEquipmentModal(type) {
@@ -961,9 +1427,10 @@
 
             if (e.code === "ArrowUp" || e.code === "ArrowDown") {
                 let dir = (e.code === "ArrowDown") ? 1 : -1;
-                // Priority: Bait box if open, else Rod box
-                if (document.getElementById("bait-box").style.display !== "none") cycleSelection('bait', dir);
-                else if (document.getElementById("rod-box").style.display !== "none") cycleSelection('rod', dir);
+                if (document.getElementById("equipmentModal").style.display === "flex") {
+                    let isRod = document.getElementById("equipmentTitle").innerText.includes("GEAR");
+                    cycleSelection(isRod ? 'rod' : 'bait', dir);
+                }
             }
 
             if (e.code === "KeyT" && inBoat && boatsData[boatType].hasTrolling && !isFighting) {
@@ -1028,21 +1495,74 @@
 
             if (e.code === "KeyF" && !player.fishing && !isFighting && !isTrolling) startFishing();
 
-            if (e.code === "Enter" && !inBoat) {
-                if (!onPirateShip) {
+            if ((e.code === "Enter" || e.key === "Enter" || e.code === "NumpadEnter") && !inBoat) {
+                let openedSomething = false;
+                
+                // 3D Shop Logic (Gear at -150, Market at 150)
+                const p3x = controls.getObject().position.x;
+                const p3z = controls.getObject().position.z;
+                
+                // Gear shop porch: x around -150, z around 35 (hd=25 + 10)
+                if (Math.abs(p3x - (-150)) < 60 && Math.abs(p3z - 35) < 50) {
+                    const isl = islands[0]; 
+                    openShop(isl.items, "SHOP - GEAR");
+                    openedSomething = true;
+                }
+                // Market porch: cabin at z=50, porch at z=50+35=85
+                else if (Math.abs(p3x - 150) < 60 && Math.abs(p3z - 85) < 50) {
+                    openMarket();
+                    openedSomething = true;
+                }
+
+                if (!openedSomething && !onPirateShip) {
                     let activeIsland = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
                     if (activeIsland) {
-                        if (Math.abs(player.x - activeIsland.shopPos) < 120) openShop(activeIsland.items, "SHOP - GEAR");
-                        else if (activeIsland.marketPos && Math.abs(player.x - activeIsland.marketPos) < 120) openMarket();
-                        else if (activeIsland.baitShopPos && Math.abs(player.x - activeIsland.baitShopPos) < 120) openShop(activeIsland.baitItems, "SHOP - BAITS");
-                        else if (activeIsland.iglooPos && Math.abs(player.x - activeIsland.iglooPos) < 120) handleEskimo();
-                        else if (activeIsland.upgradePos && Math.abs(player.x - activeIsland.upgradePos) < 120) openUpgradeShop();
+                        if (Math.abs(player.x - activeIsland.shopPos) < 120) { openShop(activeIsland.items, "SHOP - GEAR"); openedSomething = true; }
+                        else if (activeIsland.marketPos && Math.abs(player.x - activeIsland.marketPos) < 120) { openMarket(); openedSomething = true; }
+                        else if (activeIsland.baitShopPos && Math.abs(player.x - activeIsland.baitShopPos) < 120) { openShop(activeIsland.baitItems, "SHOP - BAITS"); openedSomething = true; }
+                        else if (activeIsland.iglooPos && Math.abs(player.x - activeIsland.iglooPos) < 120) { handleEskimo(); openedSomething = true; }
                     }
                 }
                 // Shop works both from water approach and while on deck
-                if (Math.abs(player.x - travelingMerchant.x) < 200) {
+                if (!openedSomething && Math.abs(player.x - travelingMerchant.x) < 200) {
                     openShop(travelingMerchant.items, "WANDERING MERCHANT");
+                    openedSomething = true;
                 }
+                if (openedSomething && controls.isLocked) controls.unlock();
+            }
+
+            // Global shop since islands are removed
+            if (e.code === "KeyB" && !inBoat) {
+                if (controls.isLocked) controls.unlock();
+                let allItems = [
+                    { n: "Motorboat", p: boatsData.motorovka.p, getBoat: "motorovka" }, { n: "Pro Yacht", p: boatsData.jachta.p, getBoat: "jachta" },
+                    { n: "Bamboo R.", p: 150, id: "bambus" }, { n: "Fiberglass R.", p: 280, id: "laminat" },
+                    { n: "Carbon R.", p: 400, id: "karbon" }, { n: "Titanium R.", p: 900, id: "titan" },
+                    { n: "Neon R.", p: 2500, id: "neon" }, { n: "Sapphire R.", p: 4500, id: "safir" },
+                    { n: "Golden Rod", p: 8000, id: "zlaty" }, { n: "Dark matter R.", p: 20000, id: "temny" },
+                    { n: "Vine Rod", p: 12000, id: "vine" }, { n: "Hardened Bamboo", p: 3500, id: "bamboo_pro" },
+                    { n: "Backpack", p: 5000, type: "backpack" }
+                ];
+                openShop(allItems, "GLOBAL GEAR SHOP");
+            }
+            if (e.code === "KeyV" && !inBoat) {
+                if (controls.isLocked) controls.unlock();
+                let allBaits = [
+                    { n: "Bread", p: 100, id: "chleba" }, { n: "Worm", p: 300, id: "zizala" },
+                    { n: "Dough", p: 800, id: "testo" }, { n: "Artificial fly", p: 1200, id: "moucha" },
+                    { n: "Spinner", p: 2000, id: "trpytka" }, { n: "Pro Wobbler", p: 5000, id: "wobler" },
+                    { n: "Squid", p: 9000, id: "chobotnice" }, { n: "Tropical Fruit", p: 1500, id: "tropical_fruit" },
+                    { n: "Diamond Lure", p: 50000, id: "diamant" }
+                ];
+                openShop(allBaits, "GLOBAL BAIT SHOP");
+            }
+            if (e.code === "KeyM" && !inBoat) {
+                if (controls.isLocked) controls.unlock();
+                openMarket();
+            }
+            if (e.code === "KeyU" && !inBoat) {
+                if (controls.isLocked) controls.unlock();
+                openUpgradeShop();
             }
         });
         window.addEventListener('keyup', e => keys[e.code] = false);
@@ -1227,10 +1747,49 @@
             document.getElementById("shopModal").style.display = "block";
         }
 
-        function closeAll() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+        function closeAll() { 
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); 
+            controls.lock(); 
+        }
 
         function startFishing() {
             if (inventory.length >= invCapacity) { showMsg("BACKPACK IS FULL!"); return; }
+            // 3D position checks
+            const p3x = controls.getObject().position.x;
+            const p3z = controls.getObject().position.z;
+            
+            // The island has a grass center (500x500 -> 250 radius) 
+            // and a sandy beach base (600x600 -> 300 radius).
+            const grassLimit = 250;
+            const beachLimit = 300;
+            
+            const distMax = Math.max(Math.abs(p3x), Math.abs(p3z));
+            const onGrass = distMax < grassLimit;
+            const onBeach = distMax >= grassLimit && distMax <= beachLimit;
+
+            if (onGrass) {
+                showMsg("WALK TO THE SANDY BEACH TO FISH!");
+                return;
+            }
+            if (!onBeach) {
+                showMsg("YOU MUST STAND ON THE BEACH TO FISH!");
+                return;
+            }
+
+            // Auto-rotate camera to face the sea (outward from island center)
+            const outward = new THREE.Vector3(p3x, 0, p3z).normalize();
+            // Build a rotation that looks in the outward direction, keeping camera level
+            const lookTarget = controls.getObject().position.clone().add(outward.multiplyScalar(100));
+            lookTarget.y = controls.getObject().position.y; // keep same height
+            // Smoothly snap camera yaw to face sea using euler
+            const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+            euler.setFromQuaternion(camera.quaternion);
+            const targetYaw = Math.atan2(outward.x, outward.z);
+            euler.y = targetYaw;
+            euler.x = -0.1; // slight downward tilt toward water
+            camera.quaternion.setFromEuler(euler);
+            showMsg("🎣 Line cast!");
+
             let zone = getZone();
             let rodPower = rodsData[currentRodId].p;
             let rodSpecial = rodsData[currentRodId].special;
@@ -1303,6 +1862,7 @@
             document.getElementById('hit-btn').style.display = 'none';
             showMsg("FISH ESCAPED! YOU WERE TOO SLOW.");
             updateHUD();
+            controls.lock();
         }
 
         function spawnHit() {
@@ -1314,6 +1874,9 @@
                 return;
             }
 
+            // User requested to see cursor and click the button
+            if (controls.isLocked) controls.unlock();
+            
             let randomLeft = 15 + Math.random() * 70;
             let randomTop = 25 + Math.random() * 50;
 
@@ -1331,6 +1894,10 @@
             hitTimeout = setTimeout(fishEscaped, timeLimit);
         }
 
+        document.addEventListener('mousedown', () => {
+            if (isFighting) handleHit();
+        });
+
         function handleHit() {
             if (!isFighting) return;
             clearTimeout(hitTimeout);
@@ -1346,6 +1913,7 @@
                 showMsg(`CAUGHT: ${currentFish.n} (${w}kg)`);
                 document.getElementById('hit-btn').style.display = 'none';
                 updateHUD(); refreshUIPanels();
+                controls.lock();
             } else {
                 spawnHit();
             }
@@ -1353,9 +1921,20 @@
 
         function getZone() {
             if (player.x < -10000 || player.x > 9500) return "Abyss";
+            
+            // Check if player is on the main island (including its beach) or in the water around it.
+            // Main island is centered at (0, 0).
+            // Grass center is 500x500 (radius 250), beach base is 600x600 (radius 300).
+            // We count the beach and the surrounding water up to 1000 units as "Coast".
+            const distMax = Math.max(Math.abs(player.x), Math.abs(player.z || 0));
+            if (distMax <= 1000) {
+                return "Coast";
+            }
+            
             let isl = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
             return isl ? isl.name : "Ocean";
         }
+
 
         function showInspectRod(id) {
             const r = rodsData[id];
@@ -1437,8 +2016,11 @@
             let luckEl = document.getElementById("luck-display");
             if (luckEl) luckEl.innerText = luckLevel > 0 ? ` | LUCK Lvl.${luckLevel}` : '';
 
-            let nearest = islands.reduce((prev, curr) => (Math.abs(curr.x - player.x) < Math.abs(prev.x - player.x) ? curr : prev));
-            let guide = (getZone() === "Ocean" || getZone() === "Abyss") ? (player.x < nearest.x ? "LEFT -> " + nearest.name : nearest.name + " <- RIGHT") : "";
+            let guide = "";
+            if (islands.length > 0) {
+                let nearest = islands.reduce((prev, curr) => (Math.abs(curr.x - player.x) < Math.abs(prev.x - player.x) ? curr : prev));
+                guide = (getZone() === "Ocean" || getZone() === "Abyss") ? (player.x < nearest.x ? "LEFT -> " + nearest.name : nearest.name + " <- RIGHT") : "";
+            }
             document.getElementById("guide").innerText = guide;
 
             let mGuide = (player.x < travelingMerchant.x ? "LEFT -> PIRATE SHIP" : "PIRATE SHIP <- RIGHT");
@@ -1720,6 +2302,21 @@
         function drawInteractionPrompts() {
             let activeIsland = islands.find(i => player.x >= i.x && player.x <= i.x + i.w);
             let py = groundY - 120;
+
+            // 3D Specific Prompts
+            const p3x = controls.getObject().position.x;
+            const p3z = controls.getObject().position.z;
+            if (!inBoat) {
+                // Gear shop at -150, 0, 0 (Counter is at z=15, front is z=25)
+                if (Math.abs(p3x - (-150)) < 80 && Math.abs(p3z - 30) < 80) {
+                    drawFloatingText("[ENTER] SHOP", canvas.width / 2, canvas.height / 2 + 100, 110);
+                }
+                // Market at 150, 0, 50 (Counter is at z=65, front is z=75)
+                else if (Math.abs(p3x - 150) < 80 && Math.abs(p3z - 80) < 80) {
+                    drawFloatingText("[ENTER] MARKET", canvas.width / 2, canvas.height / 2 + 100, 130);
+                }
+            }
+
             if (activeIsland && !inBoat) {
                 if (Math.abs(player.x - activeIsland.shopPos) < 120) drawFloatingText("[ENTER] SHOP", activeIsland.shopPos, py, 110);
                 else if (activeIsland.marketPos && Math.abs(player.x - activeIsland.marketPos) < 120) drawFloatingText("[ENTER] MARKET", activeIsland.marketPos, py, 90);
@@ -2623,7 +3220,7 @@
                 currentRodId, ownedRodIds,
                 currentBaitId, ownedBaitIds,
                 hasBackpack, invCapacity,
-                x: player.x, dx: player.dx, dy: player.dy, dir: player.dir,
+                x: player.x, z: player.z, dx: player.dx, dy: player.dy, dir: player.dir,
                 merchantX: travelingMerchant.x, merchantDx: travelingMerchant.dx
             };
             localStorage.setItem("fisherman_beta_save", JSON.stringify(data));
@@ -2654,7 +3251,18 @@
                     if (d.ownedBaitIds !== undefined) ownedBaitIds = d.ownedBaitIds;
                     if (d.hasBackpack !== undefined) hasBackpack = d.hasBackpack;
                     if (d.invCapacity !== undefined) invCapacity = d.invCapacity;
-                    if (d.x !== undefined) player.x = d.x;
+                    if (d.x !== undefined) {
+                        player.x = d.x;
+                        const savedZ = d.z !== undefined ? d.z : 0;
+                        // Reset if we are far from the 3D island origin (indicating 2D save or glitch)
+                        if (Math.abs(d.x) > 400 || Math.abs(savedZ) > 400) {
+                            controls.getObject().position.set(0, 30, 0);
+                        } else {
+                            controls.getObject().position.x = d.x;
+                            controls.getObject().position.z = savedZ;
+                            controls.getObject().position.y = 30;
+                        }
+                    }
                     if (d.dx !== undefined) player.dx = d.dx;
                     if (d.dy !== undefined) player.dy = d.dy;
                     if (d.dir !== undefined) player.dir = d.dir;
@@ -2662,6 +3270,202 @@
                     if (d.merchantDx !== undefined) travelingMerchant.dx = d.merchantDx;
                 } catch (e) { console.error("Save corrupted", e); }
             }
+        }
+
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        function draw() {
+            requestAnimationFrame(draw);
+
+            const time = performance.now();
+            let delta = (time - prevTime) / 1000;
+            if (delta > 0.1) delta = 0.1; // Cap delta to avoid math blowup on lag
+
+            // Allow movement even when unlocked
+            // Determine direction based on WASD
+            direction.z = (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0);
+            direction.x = (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0);
+            
+            if (direction.lengthSq() > 0) {
+                direction.normalize(); // consistent speed
+            }
+
+            let speed = inBoat ? (boatsData[boatType] ? boatsData[boatType].speed * 20 : 160) : 300;
+            if (isTrolling) speed = 60;
+            
+            // Sprinting
+            if (keys['ShiftLeft'] || keys['ShiftRight']) {
+                speed *= 2.5;
+            }
+
+            // Friction to stop smoothly
+            velocity.x -= velocity.x * 10.0 * delta;
+            velocity.z -= velocity.z * 10.0 * delta;
+            velocity.y -= 9.8 * 100.0 * delta; // Gravity
+
+            // Apply movement
+            if (keys['KeyW'] || keys['ArrowUp'] || keys['KeyS'] || keys['ArrowDown']) velocity.z -= direction.z * speed * delta;
+            if (keys['KeyA'] || keys['ArrowLeft'] || keys['KeyD'] || keys['ArrowRight']) velocity.x -= direction.x * speed * delta;
+            
+            // Jumping
+            let onGround = controls.getObject().position.y <= 31;
+            if (keys['Space'] && onGround) {
+                velocity.y = 250;
+            }
+
+            const prevPos = controls.getObject().position.clone();
+            
+            controls.moveRight(-velocity.x * delta);
+            controls.moveForward(-velocity.z * delta);
+            controls.getObject().position.y += velocity.y * delta;
+
+            // Collision detection
+            const playerBox = new THREE.Box3().setFromCenterAndSize(
+                controls.getObject().position,
+                new THREE.Vector3(6, 20, 6)
+            );
+            
+            let collision = false;
+            for (let box of colliders) {
+                if (playerBox.intersectsBox(box)) {
+                    collision = true;
+                    break;
+                }
+            }
+            
+            if (collision) {
+                controls.getObject().position.copy(prevPos);
+                velocity.x = 0;
+                velocity.z = 0;
+            }
+
+            // Lock y to 30 floor
+            if (controls.getObject().position.y < 30) {
+                velocity.y = 0;
+                controls.getObject().position.y = 30;
+            }
+
+            // Update onGround status for bobbing
+            onGround = controls.getObject().position.y <= 30.1;
+
+            // Head bobbing ONLY when walking on ground
+            let bobbing = 0;
+            if (onGround) {
+                let velLength = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
+                if (velLength > 5) {
+                    bobbing = Math.sin(time / 100) * (velLength / 100);
+                }
+            }
+            
+            // Apply bobbing as a temporary visual offset or keep it simple
+            // For now, let's just make sure we don't overwrite jumping
+            if (onGround) {
+                controls.getObject().position.y = 30 + bobbing;
+            }
+
+            // Sync to player logic
+            player.x = controls.getObject().position.x;
+            player.z = controls.getObject().position.z;
+            
+            // Keep player speed logic for Trolling
+            player.dx = velocity.x;
+
+            // Bobber drawing
+            if (player.fishing) {
+                if (!window.bobber) {
+                    const geo = new THREE.SphereGeometry(2, 8, 8);
+                    const mat = new THREE.MeshBasicMaterial({color: 0xff0000});
+                    window.bobber = new THREE.Mesh(geo, mat);
+                    scene.add(window.bobber);
+                    // Place 50 units in front of camera
+                    const dist = 50;
+                    const dir = new THREE.Vector3();
+                    camera.getWorldDirection(dir);
+                    window.bobber.position.copy(camera.position).add(dir.multiplyScalar(dist));
+                    window.bobber.position.y = 0; // on water
+                }
+                window.bobber.position.y = Math.sin(time / 200) * 1; // bobbing
+
+                if (!window.fishingRod) {
+                    const rodGeo = new THREE.CylinderGeometry(0.2, 0.5, 30);
+                    let rc = rodsData[currentRodId] ? rodsData[currentRodId].c : "#5d4037";
+                    const rodMat = new THREE.MeshPhongMaterial({ color: new THREE.Color(rc) });
+                    window.fishingRod = new THREE.Mesh(rodGeo, rodMat);
+                    scene.add(window.fishingRod);
+                }
+                
+                // Position rod at bottom right of screen, pointing towards bobber
+                const dir = new THREE.Vector3();
+                camera.getWorldDirection(dir);
+                const right = new THREE.Vector3().crossVectors(camera.up, dir).normalize();
+                
+                window.fishingRod.position.copy(camera.position);
+                window.fishingRod.position.add(dir.multiplyScalar(10));
+                window.fishingRod.position.add(right.multiplyScalar(6));
+                window.fishingRod.position.y -= 8;
+                
+                window.fishingRod.lookAt(window.bobber.position);
+                window.fishingRod.rotateX(Math.PI / 2);
+            } else {
+                if (window.bobber) {
+                    scene.remove(window.bobber);
+                    scene.remove(window.fishingRod);
+                    window.bobber = null;
+                    window.fishingRod = null;
+                }
+            }
+
+            // === Pirate Ship 3D Movement ===
+            if (window.pirateShip3D && typeof travelingMerchant !== 'undefined') {
+                // Movement logic ported from 2D
+                travelingMerchant.x += travelingMerchant.dx || 0.4;
+                travelingMerchant.dir = (travelingMerchant.dx > 0) ? 1 : -1;
+
+                // West Abyss bounds: -12000 to -10000 | East Abyss bounds: 9500 to 13000
+                if (travelingMerchant.x > 13000) { travelingMerchant.dx = -Math.abs(travelingMerchant.dx); }
+                if (travelingMerchant.x < -12000) { travelingMerchant.dx = Math.abs(travelingMerchant.dx); }
+                
+                // Teleport between abyss zones
+                if (travelingMerchant.x > -10000 && travelingMerchant.x < 9500) {
+                    if (travelingMerchant.dx > 0) travelingMerchant.x = 9500 + Math.random() * 500;
+                    else travelingMerchant.x = -10000 - Math.random() * 500;
+                }
+
+                // Apply to 3D model
+                window.pirateShip3D.position.x = travelingMerchant.x;
+                window.pirateShip3D.scale.x = -travelingMerchant.dir; // negated to face forward
+                window.pirateShip3D.position.y = -5 + Math.sin(time / 500) * 2; // Gentle bobbing
+            }
+
+            renderer.render(scene, camera);
+            prevTime = time;
+
+            if (isTrolling) handleTrolling();
+            
+            // Interaction Prompts for 3D
+            const p3x = controls.getObject().position.x;
+            const p3z = controls.getObject().position.z;
+            const prompt = document.getElementById("interact-prompt");
+            const pName = document.getElementById("prompt-name");
+            
+            let showPrompt = false;
+            if (controls.isLocked) { // only show when playing
+                // Gear shop porch: x around -150, z around 35
+                if (Math.abs(p3x - (-150)) < 60 && Math.abs(p3z - 35) < 50) {
+                    pName.innerText = "GEAR SHOP";
+                    showPrompt = true;
+                } 
+                // Market porch: cabin at z=50, porch at z=50+35=85
+                else if (Math.abs(p3x - 150) < 60 && Math.abs(p3z - 85) < 50) {
+                    pName.innerText = "MARKET";
+                    showPrompt = true;
+                }
+            }
+            if (prompt) prompt.style.display = showPrompt ? "block" : "none";
+
+            updateHUD();
         }
 
         loadGame();
